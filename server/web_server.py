@@ -437,9 +437,9 @@ def settings_https():
         if not email:
             return jsonify(ok=False, message="邮箱不能为空"), 400
 
-        success, cert_path, key_path = https_manager.request_letsencrypt_cert(domain, email)
+        success, cert_path, key_path, cert_error = https_manager.request_letsencrypt_cert(domain, email)
         if not success:
-            return jsonify(ok=False, message="certbot 申请失败：域名 DNS 未指向本服务器"), 500
+            return jsonify(ok=False, message=f"certbot 申请失败：{cert_error}"), 500
 
         settings['https'] = {
             'enabled': True,
