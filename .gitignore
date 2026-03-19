@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+*.egg
+
+# Node
+node_modules/
+web/status-src/node_modules/
+
+# 前端构建产物（Docker 构建时生成，不纳入 git）
+web/status/
+
+# 运行时数据（持久化卷，不纳入 git）
+data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 环境
+.env
+*.log

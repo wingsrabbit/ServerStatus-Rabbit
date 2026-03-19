@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ServerStatus-Rabbit 后台管理</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui-css@2.5.0/semantic.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
+  <style>
+    :root, [data-theme="light"] {
+      --bg: #f7f8fa; --card-bg: #fff; --text: #333; --text-secondary: #666;
+      --border: #e0e0e0; --header-bg: #1b1c1d; --group-bg: #f0f0f0;
+      --input-bg: #fff; --input-border: rgba(34,36,38,.15);
+      --table-stripe: rgba(0,0,50,.02); --modal-bg: #fff;
+    }
+    [data-theme="dark"] {
+      --bg: #1a1a2e; --card-bg: #16213e; --text: #e0e0e0; --text-secondary: #aaa;
+      --border: #2a2a4a; --header-bg: #0f3460; --group-bg: #1a1a3e;
+      --input-bg: #16213e; --input-border: #2a2a4a;
+      --table-stripe: rgba(255,255,255,.02); --modal-bg: #16213e;
+    }
+    * { box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; }
+    [data-theme="dark"] .ui.segment,
+    [data-theme="dark"] .ui.form .field>label,
+    [data-theme="dark"] .ui.table,
+    [data-theme="dark"] .ui.table thead th,
+    [data-theme="dark"] .ui.table td { background: var(--card-bg) !important; color: var(--text) !important; border-color: var(--border) !important; }
+    [data-theme="dark"] .ui.input>input,
+    [data-theme="dark"] .ui.form input,
+    [data-theme="dark"] .ui.form textarea,
+    [data-theme="dark"] .ui.form select { background: var(--input-bg) !important; color: var(--text) !important; border-color: var(--input-border) !important; }
+    [data-theme="dark"] .ui.modal,
+    [data-theme="dark"] .ui.modal>.header,
+    [data-theme="dark"] .ui.modal>.content,
+    [data-theme="dark"] .ui.modal>.actions { background: var(--modal-bg) !important; color: var(--text) !important; }
+    [data-theme="dark"] .ui.menu { background: var(--header-bg) !important; }
+    [data-theme="dark"] .ui.menu .item { color: var(--text) !important; }
+    [data-theme="dark"] .ui.toggle.checkbox label { color: var(--text) !important; }
+    [data-theme="dark"] .group-header { background: var(--group-bg) !important; color: var(--text) !important; }
+    .app-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: var(--header-bg); color: #fff; margin-bottom: 20px; border-radius: 4px; }
+    .top-bar h2 { margin: 0; font-size: 1.3rem; }
+    .top-bar .actions { display: flex; gap: 8px; align-items: center; }
+    .tab-menu { margin-bottom: 20px !important; }
+    .group-header { cursor: pointer; padding: 10px 15px; margin: 8px 0 4px; background: var(--group-bg); border-radius: 4px; font-weight: bold; user-select: none; }
+    .group-header:hover { opacity: .85; }
+    .deploy-box { background: #1b1c1d; color: #21ba45; padding: 15px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: .9rem; white-space: pre-wrap; word-break: break-all; position: relative; margin: 10px 0; }
+    .deploy-box .copy-btn { position: absolute; top: 8px; right: 8px; cursor: pointer; background: #333; color: #fff; border: none; padding: 4px 10px; border-radius: 3px; font-size: .8rem; }
+    .deploy-box .copy-btn:hover { background: #555; }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.6); z-index: 1000; display: flex; justify-content: center; align-items: center; }
+    .modal-box { background: var(--modal-bg); border-radius: 8px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; padding: 0; box-shadow: 0 4px 20px rgba(0,0,0,.3); }
+    .modal-box .header { padding: 15px 20px; border-bottom: 1px solid var(--border); font-size: 1.2rem; font-weight: bold; }
+    .modal-box .content { padding: 20px; }
+    .modal-box .actions { padding: 15px 20px; border-top: 1px solid var(--border); text-align: right; display: flex; gap: 8px; justify-content: flex-end; }
+    .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+    .status-dot.online { background: #21ba45; }
+    .status-dot.offline { background: #db2828; }
+    .theme-toggle { cursor: pointer; font-size: 1.2rem; padding: 4px 8px; border-radius: 4px; user-select: none; }
+    .login-container { max-width: 400px; margin: 100px auto; }
+    .msg { padding: 10px 15px; border-radius: 4px; margin: 10px 0; }
+    .msg.success { background: #e8f5e9; color: #2e7d32; }
+    .msg.error { background: #fce4ec; color: #c62828; }
+    [data-theme="dark"] .msg.success { background: #1b3a1b; }
+    [data-theme="dark"] .msg.error { background: #3a1b1b; }
+  </style>
+</head>
+<body>
+<div id="admin-app">
+  <!-- 登录/设置密码页 -->
+  <div v-if="!loggedIn" class="login-container">
+    <div class="ui segment">
+      <h2 class="ui header" style="text-align:center;">ServerStatus-Rabbit</h2>
+
+      <div v-if="!initialized" class="ui form">
+        <h3>首次使用 - 设置管理员密码</h3>
+        <div class="field">
+          <label>密码（至少6位）</label>
+          <input type="password" v-model="setupForm.password" placeholder="输入密码">
+        </div>
+        <div class="field">
+          <label>确认密码</label>
+          <input type="password" v-model="setupForm.confirm" placeholder="再次输入" @keyup.enter="doSetup">
+        </div>
+        <div v-if="authMsg" :class="['msg', authOk ? 'success' : 'error']">{{ authMsg }}</div>
+        <button class="ui primary fluid button" @click="doSetup">设置密码</button>
+      </div>
+
+      <div v-else-if="locked">
+        <div class="msg error">登录已锁定，请通过服务器命令行重置：<br><code>docker exec &lt;容器名&gt; python recover.py --reset-password</code></div>
+      </div>
+
+      <div v-else class="ui form">
+        <h3>管理员登录</h3>
+        <div class="field">
+          <label>密码</label>
+          <input type="password" v-model="loginForm.password" placeholder="输入管理员密码" @keyup.enter="doLogin">
+        </div>
+        <div v-if="authMsg" :class="['msg', authOk ? 'success' : 'error']">{{ authMsg }}</div>
+        <button class="ui primary fluid button" @click="doLogin">登录</button>
+      </div>
+    </div>
+    <p style="text-align:center;margin-top:15px;"><a href="/">← 返回监控页</a></p>
+  </div>
+
+  <!-- 管理面板 -->
+  <div v-else class="app-container">
+    <div class="top-bar">
+      <h2>后台管理</h2>
+      <div class="actions">
+        <span :class="['tab-btn ui small button', activeTab==='servers'?'active':'']" @click="activeTab='servers'">节点管理</span>
+        <span :class="['tab-btn ui small button', activeTab==='settings'?'active':'']" @click="activeTab='settings'">系统设置</span>
+        <span :class="['tab-btn ui small button', activeTab==='alert'?'active':'']" @click="activeTab='alert'">告警</span>
+        <button class="ui small green button" @click="showAddModal=true">+ 新增节点</button>
+        <span class="theme-toggle" @click="toggleTheme">{{ isDark ? '☀️' : '🌙' }}</span>
+        <button class="ui small button" @click="doLogout">登出</button>
+      </div>
+    </div>
+
+    <div v-if="globalMsg" :class="['msg', globalOk ? 'success' : 'error']">{{ globalMsg }}</div>
+
+    <!-- 节点管理 Tab -->
+    <div v-show="activeTab==='servers'">
+      <div v-for="group in groupedServers" :key="group.name" style="margin-bottom:10px;">
+        <div class="group-header" @click="toggleGroup(group.name)">
+          {{ groupCollapsed[group.name] ? '▶' : '▼' }} {{ group.name || '未分组' }} ({{ group.servers.length }}台)
+        </div>
+        <table class="ui basic compact table" v-show="!groupCollapsed[group.name]">
+          <thead>
+            <tr>
+              <th>用户名</th><th>节点名</th><th>类型</th><th>位置</th><th>区域</th><th>状态</th><th>在线</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="srv in group.servers" :key="srv.username">
+              <td>{{ srv.username }}</td>
+              <td>{{ srv.name }}</td>
+              <td>{{ srv.type }}</td>
+              <td>{{ srv.location }}</td>
+              <td>{{ srv.region }}</td>
+              <td>{{ srv.disabled ? '禁用' : '启用' }}</td>
+              <td><span :class="['status-dot', srv.online ? 'online' : 'offline']"></span>{{ srv.online ? '在线' : '离线' }}</td>
+              <td>
+                <button class="ui mini blue button" @click="editServer(srv)">编辑</button>
+                <button class="ui mini red button" @click="confirmDelete(srv.username)">删除</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-if="group.servers.length===0 && !groupCollapsed[group.name]" style="padding:10px 15px;color:var(--text-secondary);">（暂无节点）</div>
+      </div>
+    </div>
+
+    <!-- 系统设置 Tab -->
+    <div v-show="activeTab==='settings'">
+      <div class="ui segment">
+        <h3>HTTPS 设置</h3>
+        <div class="ui form">
+          <div class="field">
+            <div class="ui toggle checkbox">
+              <input type="checkbox" v-model="httpsForm.enabled"><label>开启 HTTPS</label>
+            </div>
+          </div>
+          <div v-if="httpsForm.enabled">
+            <div class="field">
+              <label>证书方式</label>
+              <select v-model="httpsForm.mode" class="ui dropdown">
+                <option value="letsencrypt">自动申请（Let's Encrypt）</option>
+                <option value="manual">手动上传证书</option>
+              </select>
+            </div>
+            <div v-if="httpsForm.mode==='letsencrypt'">
+              <div class="field">
+                <label>域名</label>
+                <input v-model="httpsForm.domain" placeholder="status.example.com">
+              </div>
+              <div class="field">
+                <label>邮箱（证书通知用）</label>
+                <input v-model="httpsForm.email" placeholder="admin@example.com">
+              </div>
+            </div>
+            <div v-if="httpsForm.mode==='manual'">
+              <div class="field">
+                <label>证书文件</label>
+                <input type="file" ref="certFile" accept=".pem,.crt,.key">
+              </div>
+              <div class="field">
+                <label>私钥文件</label>
+                <input type="file" ref="keyFile" accept=".pem,.crt,.key">
+              </div>
+              <button class="ui small button" @click="uploadCert">上传证书</button>
+            </div>
+            <p class="ui small text" style="color:var(--text-secondary)">ℹ️ 开启 HTTPS 后，443 端口自动启用。Let's Encrypt 申请/续期时会临时使用 80 端口。</p>
+          </div>
+        </div>
+        <br>
+        <h3>端口管理</h3>
+        <div class="ui form">
+          <div class="field">
+            <div class="ui toggle checkbox">
+              <input type="checkbox" v-model="portForm.webEnabled"><label>9191 HTTP 端口</label>
+            </div>
+          </div>
+          <p v-if="!portForm.webEnabled" class="ui small text" style="color:#db2828">⚠️ 关闭 9191 前请确认 HTTPS 443 访问正常！恢复需要：docker exec &lt;容器名&gt; python recover.py &amp;&amp; docker restart &lt;容器名&gt;</p>
+        </div>
+        <br>
+        <button class="ui primary button" @click="saveSettings">保存设置</button>
+      </div>
+    </div>
+
+    <!-- 告警 Tab -->
+    <div v-show="activeTab==='alert'">
+      <div class="ui segment">
+        <h3>掉线告警</h3>
+        <div class="ui form">
+          <div class="field">
+            <div class="ui toggle checkbox">
+              <input type="checkbox" v-model="webhookForm.enabled"><label>开启掉线告警</label>
+            </div>
+          </div>
+          <div class="field">
+            <label>Webhook URL</label>
+            <input v-model="webhookForm.url" placeholder="https://hooks.slack.com/services/xxx">
+          </div>
+          <p style="color:var(--text-secondary)">填写任意支持 HTTP POST 的 Webhook 地址即可。请求体为 JSON，包含一个 text 字段。</p>
+          <div class="field">
+            <label>掉线判定时间（秒）</label>
+            <input type="number" v-model.number="webhookForm.timeout_seconds" min="10" max="300">
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="ui button" @click="testWebhook">测试发送</button>
+            <button class="ui primary button" @click="saveWebhook">保存设置</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 新增节点弹窗 -->
+    <div class="modal-overlay" v-if="showAddModal" @click.self="showAddModal=false">
+      <div class="modal-box">
+        <div class="header">新增节点</div>
+        <div class="content">
+          <div class="ui form">
+            <div class="field"><label>用户名（唯一标识）</label><input v-model="nodeForm.username" placeholder="s01"></div>
+            <div class="field"><label>密码</label><input v-model="nodeForm.password" placeholder="客户端认证密码"></div>
+            <div class="field"><label>节点名称</label><input v-model="nodeForm.name" placeholder="主服务器"></div>
+            <div class="field"><label>类型</label><input v-model="nodeForm.type" placeholder="KVM / OpenVZ / Dedicated"></div>
+            <div class="field"><label>位置</label><input v-model="nodeForm.location" placeholder="美国洛杉矶"></div>
+            <div class="field"><label>区域代码（2位大写）</label><input v-model="nodeForm.region" placeholder="US" maxlength="2" style="text-transform:uppercase;"></div>
+            <div class="field"><label>分组（可选）</label><input v-model="nodeForm.group" placeholder="亚洲 / 美洲 / 欧洲"></div>
+            <div class="field"><label>主机名（可选）</label><input v-model="nodeForm.host" placeholder=""></div>
+            <div class="field"><div class="ui toggle checkbox"><input type="checkbox" v-model="nodeForm.disabled"><label>禁用</label></div></div>
+          </div>
+          <div v-if="modalMsg" :class="['msg', modalOk ? 'success' : 'error']">{{ modalMsg }}</div>
+        </div>
+        <div class="actions">
+          <button class="ui button" @click="showAddModal=false">取消</button>
+          <button class="ui primary button" @click="doAddServer">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 编辑节点弹窗 -->
+    <div class="modal-overlay" v-if="showEditModal" @click.self="showEditModal=false">
+      <div class="modal-box">
+        <div class="header">编辑节点 - {{ editForm.username }}</div>
+        <div class="content">
+          <div class="ui form">
+            <div class="field"><label>密码</label><input v-model="editForm.password"></div>
+            <div class="field"><label>节点名称</label><input v-model="editForm.name"></div>
+            <div class="field"><label>类型</label><input v-model="editForm.type"></div>
+            <div class="field"><label>位置</label><input v-model="editForm.location"></div>
+            <div class="field"><label>区域代码（2位大写）</label><input v-model="editForm.region" maxlength="2" style="text-transform:uppercase;"></div>
+            <div class="field"><label>分组（可选）</label><input v-model="editForm.group"></div>
+            <div class="field"><label>主机名（可选）</label><input v-model="editForm.host"></div>
+            <div class="field"><div class="ui toggle checkbox"><input type="checkbox" v-model="editForm.disabled"><label>禁用</label></div></div>
+          </div>
+          <div v-if="modalMsg" :class="['msg', modalOk ? 'success' : 'error']">{{ modalMsg }}</div>
+        </div>
+        <div class="actions">
+          <button class="ui button" @click="showEditModal=false">取消</button>
+          <button class="ui primary button" @click="doEditServer">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 部署命令弹窗 -->
+    <div class="modal-overlay" v-if="showDeployModal" @click.self="showDeployModal=false">
+      <div class="modal-box">
+        <div class="header">✅ 节点已创建</div>
+        <div class="content">
+          <p>请在目标服务器执行以下命令部署客户端：</p>
+          <div class="deploy-box">
+            <button class="copy-btn" @click="copyDeploy">📋 复制</button>{{ deployCommand }}
+          </div>
+        </div>
+        <div class="actions">
+          <button class="ui primary button" @click="showDeployModal=false">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 删除确认弹窗 -->
+    <div class="modal-overlay" v-if="showDeleteModal" @click.self="showDeleteModal=false">
+      <div class="modal-box">
+        <div class="header">确认删除</div>
+        <div class="content"><p>确定要删除节点「{{ deleteTarget }}」吗？此操作不可撤销。</p></div>
+        <div class="actions">
+          <button class="ui button" @click="showDeleteModal=false">取消</button>
+          <button class="ui red button" @click="doDelete">确认删除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, onMounted } = Vue;
+
+createApp({
+  setup() {
+    // 状态
+    const loggedIn = ref(false);
+    const initialized = ref(false);
+    const locked = ref(false);
+    const activeTab = ref('servers');
+    const servers = ref([]);
+    const isDark = ref(false);
+
+    // 消息
+    const authMsg = ref('');
+    const authOk = ref(false);
+    const globalMsg = ref('');
+    const globalOk = ref(false);
+    const modalMsg = ref('');
+    const modalOk = ref(false);
+
+    // 表单
+    const setupForm = reactive({ password: '', confirm: '' });
+    const loginForm = reactive({ password: '' });
+    const nodeForm = reactive({ username: '', password: '', name: '', type: 'KVM', host: '', location: '', region: '', group: '', disabled: false });
+    const editForm = reactive({ username: '', password: '', name: '', type: '', host: '', location: '', region: '', group: '', disabled: false });
+    const httpsForm = reactive({ enabled: false, mode: 'letsencrypt', domain: '', email: '' });
+    const portForm = reactive({ webEnabled: true });
+    const webhookForm = reactive({ enabled: false, url: '', timeout_seconds: 30 });
+
+    // 弹窗
+    const showAddModal = ref(false);
+    const showEditModal = ref(false);
+    const showDeployModal = ref(false);
+    const showDeleteModal = ref(false);
+    const deployCommand = ref('');
+    const deleteTarget = ref('');
+
+    // 分组折叠状态
+    const groupCollapsed = reactive({});
+
+    // 文件引用
+    const certFile = ref(null);
+    const keyFile = ref(null);
+
+    // API 请求封装
+    async function api(url, options = {}) {
+      const opts = { headers: { 'Content-Type': 'application/json' }, ...options };
+      if (opts.body && typeof opts.body === 'object' && !(opts.body instanceof FormData)) {
+        opts.body = JSON.stringify(opts.body);
+      }
+      if (opts.body instanceof FormData) {
+        delete opts.headers['Content-Type'];
+      }
+      const resp = await fetch(url, opts);
+      const data = await resp.json();
+      return { status: resp.status, ...data };
+    }
+
+    // 深色模式
+    function initTheme() {
+      const saved = localStorage.getItem('admin-theme');
+      if (saved) isDark.value = saved === 'dark';
+      else isDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      applyTheme();
+    }
+    function applyTheme() { document.documentElement.setAttribute('data-theme', isDark.value ? 'dark' : 'light'); }
+    function toggleTheme() { isDark.value = !isDark.value; localStorage.setItem('admin-theme', isDark.value ? 'dark' : 'light'); applyTheme(); }
+
+    // 检查状态
+    async function checkStatus() {
+      try {
+        const res = await api('/admin/status');
+        if (res.ok) {
+          initialized.value = res.data.initialized;
+          locked.value = res.data.locked;
+          loggedIn.value = res.data.logged_in;
+          if (loggedIn.value) { loadServers(); loadSettings(); loadWebhook(); }
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    // 设置密码
+    async function doSetup() {
+      authMsg.value = '';
+      const res = await api('/admin/setup', { method: 'POST', body: { password: setupForm.password, confirm: setupForm.confirm } });
+      authMsg.value = res.message; authOk.value = res.ok;
+      if (res.ok) { loggedIn.value = true; initialized.value = true; loadServers(); loadSettings(); loadWebhook(); }
+    }
+
+    // 登录
+    async function doLogin() {
+      authMsg.value = '';
+      const res = await api('/admin/login', { method: 'POST', body: { password: loginForm.password } });
+      authMsg.value = res.message; authOk.value = res.ok;
+      if (res.ok) { loggedIn.value = true; loadServers(); loadSettings(); loadWebhook(); }
+      if (res.message && res.message.includes('锁定')) { locked.value = true; }
+    }
+
+    // 登出
+    async function doLogout() {
+      await api('/admin/logout', { method: 'POST' });
+      loggedIn.value = false; authMsg.value = '';
+    }
+
+    // 加载节点列表
+    async function loadServers() {
+      try {
+        const res = await api('/api/servers');
+        if (res.ok) servers.value = res.data;
+      } catch (e) { console.error(e); }
+    }
+
+    // 分组
+    const groupedServers = computed(() => {
+      const gMap = {};
+      const order = [];
+      const ungrouped = [];
+      for (const srv of servers.value) {
+        const g = srv.group || '';
+        if (!g) { ungrouped.push(srv); }
+        else { if (!gMap[g]) { gMap[g] = []; order.push(g); } gMap[g].push(srv); }
+      }
+      const result = order.map(n => ({ name: n, servers: gMap[n] }));
+      if (ungrouped.length > 0 || result.length === 0) result.push({ name: '', servers: ungrouped });
+      return result;
+    });
+
+    function toggleGroup(name) { groupCollapsed[name] = !groupCollapsed[name]; }
+
+    // 新增节点
+    async function doAddServer() {
+      modalMsg.value = '';
+      const body = { ...nodeForm, region: (nodeForm.region || '').toUpperCase() };
+      const res = await api('/api/servers', { method: 'POST', body });
+      modalMsg.value = res.message; modalOk.value = res.ok;
+      if (res.ok) {
+        deployCommand.value = res.data.deploy_command;
+        showAddModal.value = false;
+        showDeployModal.value = true;
+        Object.assign(nodeForm, { username: '', password: '', name: '', type: 'KVM', host: '', location: '', region: '', group: '', disabled: false });
+        loadServers();
+      }
+    }
+
+    // 编辑节点
+    function editServer(srv) {
+      Object.assign(editForm, { ...srv });
+      modalMsg.value = '';
+      showEditModal.value = true;
+    }
+    async function doEditServer() {
+      modalMsg.value = '';
+      const body = { password: editForm.password, name: editForm.name, type: editForm.type, host: editForm.host, location: editForm.location, region: (editForm.region || '').toUpperCase(), group: editForm.group, disabled: editForm.disabled };
+      const res = await api(`/api/servers/${editForm.username}`, { method: 'PUT', body });
+      modalMsg.value = res.message; modalOk.value = res.ok;
+      if (res.ok) { showEditModal.value = false; loadServers(); }
+    }
+
+    // 删除节点
+    function confirmDelete(username) { deleteTarget.value = username; showDeleteModal.value = true; }
+    async function doDelete() {
+      const res = await api(`/api/servers/${deleteTarget.value}`, { method: 'DELETE' });
+      showDeleteModal.value = false;
+      globalMsg.value = res.message; globalOk.value = res.ok;
+      if (res.ok) loadServers();
+      setTimeout(() => { globalMsg.value = ''; }, 3000);
+    }
+
+    // 系统设置
+    async function loadSettings() {
+      try {
+        // 我们无法直接获取 settings（没有单独的 GET /api/settings），仅加载 webhook
+        // HTTPS 和端口状态从 settings.json 回显可通过初始默认值处理
+      } catch (e) { console.error(e); }
+    }
+
+    async function saveSettings() {
+      globalMsg.value = '';
+      // 保存 HTTPS
+      const httpsRes = await api('/api/settings/https', { method: 'POST', body: { enabled: httpsForm.enabled, mode: httpsForm.mode, domain: httpsForm.domain, email: httpsForm.email } });
+      if (!httpsRes.ok) { globalMsg.value = httpsRes.message; globalOk.value = false; return; }
+      // 保存端口
+      const portRes = await api('/api/settings/port9191', { method: 'POST', body: { enabled: portForm.webEnabled } });
+      globalMsg.value = portRes.ok ? '设置已保存' : portRes.message;
+      globalOk.value = portRes.ok;
+      setTimeout(() => { globalMsg.value = ''; }, 3000);
+    }
+
+    // 证书上传
+    async function uploadCert() {
+      const cf = certFile.value;
+      const kf = keyFile.value;
+      if (!cf || !kf || !cf.files[0] || !kf.files[0]) { modalMsg.value = '请选择证书和私钥文件'; modalOk.value = false; return; }
+      const fd = new FormData();
+      fd.append('cert', cf.files[0]);
+      fd.append('key', kf.files[0]);
+      const res = await api('/api/settings/cert-upload', { method: 'POST', body: fd });
+      globalMsg.value = res.message; globalOk.value = res.ok;
+      setTimeout(() => { globalMsg.value = ''; }, 3000);
+    }
+
+    // Webhook
+    async function loadWebhook() {
+      try {
+        const res = await api('/api/settings/webhook');
+        if (res.ok && res.data) Object.assign(webhookForm, res.data);
+      } catch (e) { console.error(e); }
+    }
+    async function saveWebhook() {
+      globalMsg.value = '';
+      const res = await api('/api/settings/webhook', { method: 'POST', body: { ...webhookForm } });
+      globalMsg.value = res.message; globalOk.value = res.ok;
+      setTimeout(() => { globalMsg.value = ''; }, 3000);
+    }
+    async function testWebhook() {
+      globalMsg.value = '';
+      const res = await api('/api/settings/webhook/test', { method: 'POST', body: { url: webhookForm.url } });
+      globalMsg.value = res.message; globalOk.value = res.ok;
+      setTimeout(() => { globalMsg.value = ''; }, 3000);
+    }
+
+    // 复制部署命令
+    function copyDeploy() {
+      navigator.clipboard.writeText(deployCommand.value).then(() => { globalMsg.value = '已复制到剪贴板'; globalOk.value = true; setTimeout(() => { globalMsg.value = ''; }, 2000); });
+    }
+
+    // 定时刷新节点列表
+    let refreshTimer = null;
+
+    onMounted(() => {
+      initTheme();
+      checkStatus();
+      refreshTimer = setInterval(() => { if (loggedIn.value && activeTab.value === 'servers') loadServers(); }, 5000);
+    });
+
+    return {
+      loggedIn, initialized, locked, activeTab, servers, isDark,
+      authMsg, authOk, globalMsg, globalOk, modalMsg, modalOk,
+      setupForm, loginForm, nodeForm, editForm, httpsForm, portForm, webhookForm,
+      showAddModal, showEditModal, showDeployModal, showDeleteModal,
+      deployCommand, deleteTarget, groupedServers, groupCollapsed,
+      certFile, keyFile,
+      doSetup, doLogin, doLogout,
+      loadServers, toggleGroup,
+      doAddServer, editServer, doEditServer,
+      confirmDelete, doDelete,
+      saveSettings, uploadCert,
+      saveWebhook, testWebhook, loadWebhook,
+      copyDeploy, toggleTheme, checkStatus
+    };
+  }
+}).mount('#admin-app');
+</script>
+</body>
+</html>
