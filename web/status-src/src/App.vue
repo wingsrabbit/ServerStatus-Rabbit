@@ -6,7 +6,7 @@
     <servers-table :servers="servers"/>
     <servers-card :servers="servers"/>
   </div>
-  <the-footer :updated="updated"/>
+  <the-footer :last-fetch-time="lastFetchTime"/>
 </template>
 
 <script lang="ts">
@@ -32,6 +32,7 @@ export default defineComponent({
   setup() {
     const servers = ref<Array<StatusItem | BoxItem>>();
     const updated = ref<number>();
+    const lastFetchTime = ref<number>(0);
     const { interval, header, subHeader } = window.__PRE_CONFIG__;
     const headerText = ref(header);
     const subHeaderText = ref(subHeader);
@@ -40,6 +41,7 @@ export default defineComponent({
       .then(res => {
         servers.value = res.data.servers;
         updated.value = Number(res.data.updated);
+        lastFetchTime.value = Date.now() / 1000;
       })
       .catch(err => console.log(err));
     onMounted(() => {
@@ -76,6 +78,7 @@ export default defineComponent({
     return {
       servers,
       updated,
+      lastFetchTime,
       isDark,
       toggleTheme,
       headerText,

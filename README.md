@@ -35,7 +35,6 @@ docker run -d --restart=always \
   -p 9191:9191 \
   -p 9192:9192 \
   -p 443:443 \
-  -p 80:80 \
   -v $(pwd)/data:/app/data \
   serverstatus-rabbit
 ```
@@ -70,7 +69,7 @@ docker run -d --restart=always \
 | 9191 | Web 监控页面 + 后台管理（HTTP） |
 | 9192 | TCP 数据通信（客户端上报数据） |
 | 443 | HTTPS（可选，后台开启后生效） |
-| 80 | Let's Encrypt 证书验证（可选） |
+| 80 | Let's Encrypt 证书验证（certbot 申请时临时使用，无需映射） |
 
 ## 数据持久化
 

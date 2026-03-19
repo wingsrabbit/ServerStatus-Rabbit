@@ -9,7 +9,7 @@
     <td>{{ server.name }}</td>
     <td>{{ server.type }}</td>
     <td>{{ server.location }}</td>
-    <td>{{ formatUptime }}</td>
+    <td>{{ getStatus ? formatUptime : '–' }}</td>
     <td>{{ getStatus ? server.load : '-' }}</td>
     <td>{{
         getStatus ? `${tableRowByteConvert(server.network_rx)} | ${tableRowByteConvert(server.network_tx)}` : '–'

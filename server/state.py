@@ -26,6 +26,7 @@ def _make_default_node():
         'last_seen': 0,
         'online': False,
         'alert_sent': False,
+        'connected_since': 0,
         'data': {
             'uptime': '0',
             'load': 0.0,
@@ -54,6 +55,8 @@ def update_node(username, data):
             _nodes[username] = _make_default_node()
         node = _nodes[username]
         node['last_seen'] = time.time()
+        if not node['online']:
+            node['connected_since'] = time.time()
         node['online'] = True
         # 合并上报的数据字段
         for key in data:
@@ -79,7 +82,7 @@ def get_all_stats(config_servers):
                 'online': node['online'] if not srv.get('disabled', False) else False,
                 'online4': node['data'].get('online4', False) if node['online'] else False,
                 'online6': node['data'].get('online6', False) if node['online'] else False,
-                'uptime': str(node['data'].get('uptime', '0')),
+                'uptime': str(int(time.time() - node['connected_since'])) if node['online'] and node.get('connected_since', 0) > 0 else '0',
                 'load': node['data'].get('load', 0.0),
                 'cpu': node['data'].get('cpu', 0.0),
                 'cpu_cores': node['data'].get('cpu_cores', 1),
@@ -115,10 +118,12 @@ def check_offline(timeout_seconds):
             if now - node['last_seen'] > timeout_seconds:
                 if node['online']:
                     node['online'] = False
+                    node['connected_since'] = 0
                     newly_offline.append(username)
             else:
                 if not node['online']:
                     node['online'] = True
+                    node['connected_since'] = now
                     newly_online.append(username)
     return newly_offline, newly_online
 
@@ -175,6 +180,7 @@ def set_offline(username):
     with _lock:
         if username in _nodes:
             _nodes[username]['online'] = False
+            _nodes[username]['connected_since'] = 0
 
 
 def get_connected_usernames():

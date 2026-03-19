@@ -10,16 +10,16 @@ import { defineComponent, ref, onMounted, onBeforeUnmount } from 'vue';
 export default defineComponent({
   name: 'TheFooter',
   props: {
-    updated: { type: Number, default: 0 }
+    lastFetchTime: { type: Number, default: 0 }
   },
   setup(props) {
     const timeSince = ref('--');
     let timer: number;
 
     const formatTimeSince = () => {
-      if (!props.updated) { timeSince.value = '从未'; return; }
-      const totalSeconds = Math.floor(Date.now() / 1000 - props.updated);
-      if (totalSeconds < 0) { timeSince.value = '刚刚'; return; }
+      if (!props.lastFetchTime) { timeSince.value = '从未'; return; }
+      const totalSeconds = Math.floor(Date.now() / 1000 - props.lastFetchTime);
+      if (totalSeconds < 0 || totalSeconds <= 10) { timeSince.value = '10秒内'; return; }
       const days = Math.floor(totalSeconds / 86400);
       const hours = Math.floor((totalSeconds % 86400) / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
