@@ -72,6 +72,20 @@ docker run -d --restart=always \
 
 > 数据卷 `data/` 中的配置和账户信息会保留，无需重新设置。
 
+### 热更新（免重建）
+
+如果本次更新**不涉及前端监控页（Vue 组件）改动**，可以用热更新脚本直接将后端代码和管理页面注入到运行中的容器，无需重建镜像：
+
+```bash
+cd ServerStatus-Rabbit
+git pull
+bash update.sh ss-server
+```
+
+脚本会自动将 `server/`、`client/`、`app.py`、`web/admin/` 复制到容器内并重启。
+
+> **注意：** 如果更新包含前端监控页（`web/status-src/` 下的 Vue 组件）改动，仍需完整重建镜像。
+
 ### 3. 添加被监控节点
 
 在后台管理页面点击「新增节点」，填写节点信息后系统会自动生成部署命令，形如：

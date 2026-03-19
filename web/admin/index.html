@@ -205,6 +205,12 @@
         </div>
         <br>
         <button class="ui primary button" @click="saveSettings">保存设置</button>
+        <span style="margin-left:20px;">
+          DNS 检测：
+          <input v-model="dnsCheckDomain" placeholder="status.example.com" style="width:200px;padding:6px 8px;border:1px solid var(--input-border);border-radius:4px;background:var(--input-bg);color:var(--text);">
+          <button class="ui small button" @click="checkDns">检测</button>
+          <span v-if="dnsCheckResult">→ {{ dnsCheckResult }}</span>
+        </span>
       </div>
 
       <div class="ui segment">
@@ -368,6 +374,10 @@ createApp({
     const deployCommand = ref('');
     const deleteTarget = ref('');
 
+    // DNS 检测
+    const dnsCheckDomain = ref('');
+    const dnsCheckResult = ref('');
+
     // 分组折叠状态
     const groupCollapsed = reactive({});
 
@@ -508,15 +518,30 @@ createApp({
     }
 
     async function saveSettings() {
-      globalMsg.value = '';
+      globalMsg.value = '正在运行...';
+      globalOk.value = true;
       // 保存 HTTPS
       const httpsRes = await api('/api/settings/https', { method: 'POST', body: { enabled: httpsForm.enabled, mode: httpsForm.mode, domain: httpsForm.domain, email: httpsForm.email } });
       if (!httpsRes.ok) { globalMsg.value = httpsRes.message; globalOk.value = false; return; }
       // 保存端口
       const portRes = await api('/api/settings/port9191', { method: 'POST', body: { enabled: portForm.webEnabled } });
-      globalMsg.value = portRes.ok ? '设置已保存' : portRes.message;
-      globalOk.value = portRes.ok;
-      setTimeout(() => { globalMsg.value = ''; }, 3000);
+      if (portRes.ok) {
+        globalMsg.value = '✅ 设置已保存';
+        globalOk.value = true;
+        setTimeout(() => { globalMsg.value = ''; }, 3000);
+      } else {
+        globalMsg.value = portRes.message;
+        globalOk.value = false;
+      }
+    }
+
+    // DNS 检测
+    async function checkDns() {
+      dnsCheckResult.value = '检测中...';
+      const d = dnsCheckDomain.value || httpsForm.domain;
+      if (!d) { dnsCheckResult.value = '请输入域名'; return; }
+      const res = await api(`/api/dns-check?domain=${encodeURIComponent(d)}`);
+      dnsCheckResult.value = res.ok ? res.ip : res.message;
     }
 
     // 证书上传
@@ -586,12 +611,13 @@ createApp({
       setupForm, loginForm, nodeForm, editForm, httpsForm, portForm, webhookForm, uiForm,
       showAddModal, showEditModal, showDeployModal, showDeleteModal,
       deployCommand, deleteTarget, groupedServers, groupCollapsed,
+      dnsCheckDomain, dnsCheckResult,
       certFile, keyFile,
       doSetup, doLogin, doLogout,
       loadServers, toggleGroup,
       doAddServer, editServer, doEditServer,
       confirmDelete, doDelete,
-      saveSettings, uploadCert,
+      saveSettings, uploadCert, checkDns,
       saveWebhook, testWebhook, loadWebhook,
       saveUiSettings, loadUiSettings,
       copyDeploy, toggleTheme, checkStatus

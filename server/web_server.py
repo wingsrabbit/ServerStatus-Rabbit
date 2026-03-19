@@ -390,6 +390,21 @@ def delete_server(username):
 
 # ──────────────────── 系统设置 API ────────────────────
 
+@app.route('/api/dns-check')
+@_require_login
+def dns_check():
+    """检测域名 DNS 解析结果"""
+    import socket as _socket
+    domain = request.args.get('domain', '').strip()
+    if not domain:
+        return jsonify(ok=False, message="域名不能为空")
+    try:
+        ip = _socket.gethostbyname(domain)
+        return jsonify(ok=True, ip=ip)
+    except _socket.gaierror:
+        return jsonify(ok=True, ip="无指向")
+
+
 @app.route('/api/settings/https', methods=['POST'])
 @_require_login
 @_require_https_for_admin
