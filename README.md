@@ -35,6 +35,7 @@ docker run -d --restart=always \
   -p 9191:9191 \
   -p 9192:9192 \
   -p 443:443 \
+  -p 80:80 \
   -v $(pwd)/data:/app/data \
   serverstatus-rabbit
 ```
@@ -42,7 +43,7 @@ docker run -d --restart=always \
 启动后访问 `http://你的IP:9191` 查看监控页面，访问 `http://你的IP:9191/admin` 进入后台管理。
 
 > **首次访问后台**会提示设置管理员密码（至少 6 位）。
-> **注意：** 不要映射 80 端口（`-p 80:80`），80 端口仅在后台申请 Let's Encrypt 证书时由 certbot 临时使用。
+> 80 端口仅在申请/续期 Let's Encrypt 证书时由 certbot 临时监听数秒，平时空闲。
 
 ### 升级已有部署
 
@@ -60,12 +61,13 @@ docker rm ss-server
 # 重新构建镜像
 docker build -t serverstatus-rabbit .
 
-# 用新参数启动（注意：不映射 80 端口）
+# 用新参数启动
 docker run -d --restart=always \
   --name ss-server \
   -p 9191:9191 \
   -p 9192:9192 \
   -p 443:443 \
+  -p 80:80 \
   -v $(pwd)/data:/app/data \
   serverstatus-rabbit
 ```
@@ -112,7 +114,7 @@ docker run -d --restart=always \
 | 9191 | Web 监控页面 + 后台管理（HTTP） |
 | 9192 | TCP 数据通信（客户端上报数据） |
 | 443 | HTTPS（可选，后台开启后生效） |
-| 80 | Let's Encrypt 证书验证（certbot 申请时临时使用，无需映射） |
+| 80 | Let's Encrypt 证书验证（certbot 申请/续期时临时监听数秒，平时空闲） |
 
 ## 数据持久化
 
