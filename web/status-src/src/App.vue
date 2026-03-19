@@ -51,7 +51,7 @@ export default defineComponent({
           if (res.data.data.header) headerText.value = res.data.data.header;
           if (res.data.data.subHeader) subHeaderText.value = res.data.data.subHeader;
         }
-      }).catch(() => {});
+      }).catch(() => { /* ignore */ });
     });
     onBeforeUnmount(() => clearInterval(timer));
 
