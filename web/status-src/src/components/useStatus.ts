@@ -43,6 +43,19 @@ export default (props: Props) => {
     else return (data / 1024 / 1024 / 1024 / 1024).toFixed(2) + ' TiB';
   });
 
+  const formatUptime = computed((): string => {
+    const s = props.server as StatusItem;
+    const totalSeconds = parseInt(s.uptime) || 0;
+    if (totalSeconds < 60) return `${totalSeconds}秒`;
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (days > 0) return `${days}天${hours}小时`;
+    if (hours > 0) return `${hours}小时${minutes}分`;
+    return `${minutes}分${seconds}秒`;
+  });
+
   return {
     getStatus,
     getCpuStatus,
@@ -50,6 +63,7 @@ export default (props: Props) => {
     getHDDStatus,
     getProcessBarStatus,
     tableRowByteConvert,
-    expandRowByteConvert
+    expandRowByteConvert,
+    formatUptime
   };
 };

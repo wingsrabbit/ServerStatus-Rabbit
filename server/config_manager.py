@@ -45,6 +45,10 @@ DEFAULT_SETTINGS = {
         "enabled": False,
         "url": "",
         "timeout_seconds": 30
+    },
+    "ui": {
+        "header": "Server Status",
+        "subHeader": "Servers' Probes Set up with ServerStatus-Rabbit"
     }
 }
 

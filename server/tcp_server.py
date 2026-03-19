@@ -161,7 +161,6 @@ def _handle_client(conn, addr):
         if username:
             with _clients_lock:
                 _connected_clients.pop(username, None)
-            state.set_offline(username)
             logger.info("客户端断开: %s", username)
         try:
             conn.close()

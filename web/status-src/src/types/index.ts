@@ -15,6 +15,7 @@ export interface StatusItem extends BoxItem {
   uptime: string;
   load: number;
   cpu: number;
+  cpu_cores: number;
   network_rx: number;
   network_tx: number;
   network_in: number;

@@ -21,7 +21,7 @@ WORKDIR /app
 # 复制前端构建产物
 COPY --from=frontend-builder /frontend/dist /app/web/status/
 
-# 暴露端口：Web(9191) + TCP通信(9192) + HTTPS(443) + HTTP验证(80)
+# 暴露端口：Web(9191) + TCP通信(9192) + HTTPS(443) + certbot验证(80)
 EXPOSE 9191 9192 443 80
 
 # 入口

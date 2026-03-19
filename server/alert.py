@@ -71,9 +71,10 @@ def check_and_alert():
     """掉线检测 + 告警发送（由定时线程调用）"""
     settings = config_manager.load_settings()
     webhook_cfg = settings.get('webhook', {})
-    timeout_seconds = webhook_cfg.get('timeout_seconds', 30)
+    timeout_seconds = webhook_cfg.get('timeout_seconds', 10)
 
-    newly_offline, newly_online = state.check_offline(timeout_seconds)
+    newly_offline = state.check_offline(timeout_seconds)
+    newly_online = state.pop_newly_online()
 
     if not webhook_cfg.get('enabled', False) or not webhook_cfg.get('url', ''):
         return

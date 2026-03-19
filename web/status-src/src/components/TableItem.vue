@@ -9,7 +9,7 @@
     <td>{{ server.name }}</td>
     <td>{{ server.type }}</td>
     <td>{{ server.location }}</td>
-    <td>{{ server.uptime || '–' }}</td>
+    <td>{{ getStatus ? formatUptime : '–' }}</td>
     <td>{{ getStatus ? server.load : '-' }}</td>
     <td>{{
         getStatus ? `${tableRowByteConvert(server.network_rx)} | ${tableRowByteConvert(server.network_tx)}` : '–'
@@ -20,22 +20,22 @@
       }}
     </td>
     <td>
-      <div class="ui progress" :class="getProcessBarStatus(getCpuStatus)">
-        <div class="bar" :style="{'width': `${getCpuStatus.toString()}%`}">
+      <div class="ui progress" :class="getStatus ? getProcessBarStatus(getCpuStatus) : 'error'">
+        <div class="bar" :style="{'width': getStatus ? `${getCpuStatus.toString()}%` : '100%'}">
           {{ getStatus ? `${getCpuStatus.toString()}%` : '维护中' }}
         </div>
       </div>
     </td>
     <td>
-      <div class="ui progress" :class="getProcessBarStatus(getRAMStatus)">
-        <div class="bar" :style="{'width': `${getRAMStatus.toString()}%`}">
+      <div class="ui progress" :class="getStatus ? getProcessBarStatus(getRAMStatus) : 'error'">
+        <div class="bar" :style="{'width': getStatus ? `${getRAMStatus.toString()}%` : '100%'}">
           {{ getStatus ? `${getRAMStatus.toString()}%` : '维护中' }}
         </div>
       </div>
     </td>
     <td>
-      <div class="ui progress" :class="getProcessBarStatus(getHDDStatus)">
-        <div class="bar" :style="{'width': `${getHDDStatus.toString()}%`}">
+      <div class="ui progress" :class="getStatus ? getProcessBarStatus(getHDDStatus) : 'error'">
+        <div class="bar" :style="{'width': getStatus ? `${getHDDStatus.toString()}%` : '100%'}">
           {{ getStatus ? `${getHDDStatus.toString()}%` : '维护中' }}
         </div>
       </div>
@@ -44,6 +44,10 @@
   <tr class="expandRow">
     <td colspan="12">
       <div :class="{collapsed}" :style="{'max-height': getStatus ? '' : '0'}">
+        <div id="expand_cpu">CPU信息: {{
+            getStatus ? `${getCpuStatus}% / ${(server as any).cpu_cores || 1} Core` : '–'
+          }}
+        </div>
         <div id="expand_mem">内存信息: {{
             getStatus ? `${expandRowByteConvert(server.memory_used * 1024)} / ${expandRowByteConvert(server.memory_total * 1024)}` : '–'
           }}
@@ -78,10 +82,7 @@ export default defineComponent({
   setup(props) {
     const collapsed = ref(true);
     const utils = useStatus(props);
-    return {
-      collapsed,
-      ...utils
-    };
+    return { collapsed, ...utils };
   }
 });
 </script>

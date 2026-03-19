@@ -13,11 +13,9 @@ import { defineComponent } from 'vue';
 
 export default defineComponent({
   name: 'TheHeader',
-  setup() {
-    const { header, subHeader } = window.__PRE_CONFIG__;
-    return {
-      header, subHeader
-    };
+  props: {
+    header: { type: String, default: 'Server Status' },
+    subHeader: { type: String, default: '' }
   }
 });
 </script>

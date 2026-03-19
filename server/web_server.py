@@ -379,8 +379,9 @@ def delete_server(username):
     if not config_manager.find_server(username):
         return jsonify(ok=False, message="节点不存在"), 404
 
-    # 断开 TCP 连接
+    # 断开 TCP 连接并清理状态
     tcp_server.disconnect_user(username)
+    state.set_offline(username)
     config_manager.delete_server(username)
     state.reload_nodes(config_manager.get_servers())
 
@@ -388,6 +389,21 @@ def delete_server(username):
 
 
 # ──────────────────── 系统设置 API ────────────────────
+
+@app.route('/api/dns-check')
+@_require_login
+def dns_check():
+    """检测域名 DNS 解析结果"""
+    import socket as _socket
+    domain = request.args.get('domain', '').strip()
+    if not domain:
+        return jsonify(ok=False, message="域名不能为空")
+    try:
+        ip = _socket.gethostbyname(domain)
+        return jsonify(ok=True, ip=ip)
+    except _socket.gaierror:
+        return jsonify(ok=True, ip="无指向")
+
 
 @app.route('/api/settings/https', methods=['POST'])
 @_require_login
@@ -421,9 +437,9 @@ def settings_https():
         if not email:
             return jsonify(ok=False, message="邮箱不能为空"), 400
 
-        success, cert_path, key_path = https_manager.request_letsencrypt_cert(domain, email)
+        success, cert_path, key_path, cert_error = https_manager.request_letsencrypt_cert(domain, email)
         if not success:
-            return jsonify(ok=False, message="certbot 申请失败：域名 DNS 未指向本服务器"), 500
+            return jsonify(ok=False, message=f"certbot 申请失败：{cert_error}"), 500
 
         settings['https'] = {
             'enabled': True,
@@ -485,6 +501,33 @@ def settings_port9191():
         config_manager.save_settings(settings)
         _start_http_server()
         return jsonify(ok=True, message="9191 端口已开启")
+
+
+@app.route('/api/settings/ui', methods=['GET'])
+def get_ui_settings():
+    """获取 UI 配置（公开接口，前端需要读取标题）"""
+    settings = config_manager.load_settings()
+    return jsonify(ok=True, data=settings.get('ui', {}))
+
+
+@app.route('/api/settings/ui', methods=['POST'])
+@_require_login
+@_require_https_for_admin
+def set_ui_settings():
+    """设置 UI 配置"""
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify(ok=False, message="请求体不合法"), 400
+
+    settings = config_manager.load_settings()
+    ui = settings.get('ui', {})
+    if 'header' in data:
+        ui['header'] = str(data['header']).strip()[:100]
+    if 'subHeader' in data:
+        ui['subHeader'] = str(data['subHeader']).strip()[:200]
+    settings['ui'] = ui
+    config_manager.save_settings(settings)
+    return jsonify(ok=True, message="页面设置已保存")
 
 
 @app.route('/api/settings/webhook', methods=['GET'])

@@ -35,18 +35,18 @@ def request_letsencrypt_cert(domain, email):
             key_path = os.path.join(LETSENCRYPT_DIR, 'live', domain, 'privkey.pem')
             if os.path.exists(cert_path) and os.path.exists(key_path):
                 logger.info("certbot 申请成功: %s", domain)
-                return True, cert_path, key_path
-            return False, None, None
+                return True, cert_path, key_path, None
+            return False, None, None, "证书文件生成失败"
         else:
-            error_msg = result.stderr or result.stdout or "未知错误"
+            error_msg = result.stdout or result.stderr or "未知错误"
             logger.error("certbot 申请失败: %s", error_msg)
-            return False, None, None
+            return False, None, None, error_msg
     except subprocess.TimeoutExpired:
         logger.error("certbot 执行超时")
-        return False, None, None
+        return False, None, None, "certbot 执行超时（120秒）"
     except FileNotFoundError:
         logger.error("certbot 未安装")
-        return False, None, None
+        return False, None, None, "certbot 未安装"
 
 
 def renew_letsencrypt():

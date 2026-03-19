@@ -1,13 +1,12 @@
 <template>
   <div class="theme-toggle" @click="toggleTheme">{{ isDark ? '☀️' : '🌙' }}</div>
-  <the-header/>
+  <the-header :header="headerText" :sub-header="subHeaderText"/>
   <the-error v-show="!servers"/>
   <div class="container">
     <servers-table :servers="servers"/>
-    <update-time :updated="updated"/>
     <servers-card :servers="servers"/>
   </div>
-  <the-footer/>
+  <the-footer :last-fetch-time="lastFetchTime"/>
 </template>
 
 <script lang="ts">
@@ -17,7 +16,6 @@ import axios from 'axios';
 import TheHeader from '@/components/TheHeader.vue';
 import TheError from '@/components/TheError.vue';
 import ServersTable from '@/components/ServersTable.vue';
-import UpdateTime from '@/components/UpdateTime.vue';
 import ServersCard from '@/components/ServersCard.vue';
 import TheFooter from '@/components/TheFooter.vue';
 import { BoxItem, StatusItem } from '@/types';
@@ -29,21 +27,34 @@ export default defineComponent({
     TheError,
     ServersTable,
     ServersCard,
-    TheFooter,
-    UpdateTime
+    TheFooter
   },
   setup() {
     const servers = ref<Array<StatusItem | BoxItem>>();
     const updated = ref<number>();
-    const { interval } = window.__PRE_CONFIG__;
+    const lastFetchTime = ref<number>(0);
+    const { interval, header, subHeader } = window.__PRE_CONFIG__;
+    const headerText = ref(header);
+    const subHeaderText = ref(subHeader);
     let timer: number;
     const runFetch = () => axios.get('/api/stats')
       .then(res => {
         servers.value = res.data.servers;
         updated.value = Number(res.data.updated);
+        lastFetchTime.value = Date.now() / 1000;
       })
       .catch(err => console.log(err));
-    onMounted(() => (runFetch(), true) && (timer = setInterval(runFetch, interval * 1000)));
+    onMounted(() => {
+      runFetch();
+      timer = setInterval(runFetch, interval * 1000);
+      // 加载自定义 UI 设置
+      axios.get('/api/settings/ui').then(res => {
+        if (res.data.ok && res.data.data) {
+          if (res.data.data.header) headerText.value = res.data.data.header;
+          if (res.data.data.subHeader) subHeaderText.value = res.data.data.subHeader;
+        }
+      }).catch(() => { /* ignore */ });
+    });
     onBeforeUnmount(() => clearInterval(timer));
 
     // 深色模式
@@ -67,8 +78,11 @@ export default defineComponent({
     return {
       servers,
       updated,
+      lastFetchTime,
       isDark,
-      toggleTheme
+      toggleTheme,
+      headerText,
+      subHeaderText
     };
   }
 });
