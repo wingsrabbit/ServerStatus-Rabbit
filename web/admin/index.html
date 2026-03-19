@@ -63,6 +63,7 @@
     .msg.error { background: #fce4ec; color: #c62828; }
     [data-theme="dark"] .msg.success { background: #1b3a1b; }
     [data-theme="dark"] .msg.error { background: #3a1b1b; }
+    .ui.form input[type="text"], .ui.form input[type="password"], .ui.form input[type="email"], .ui.form input[type="number"], .ui.form input:not([type]) { padding: .6em 1em !important; }
   </style>
 </head>
 <body>
@@ -106,7 +107,7 @@
   <!-- 管理面板 -->
   <div v-else class="app-container">
     <div class="top-bar">
-      <h2>后台管理 <span style="font-size:.75rem;font-weight:normal;opacity:.7">v0.128</span></h2>
+      <h2>后台管理 <span style="font-size:.75rem;font-weight:normal;opacity:.7">v0.129</span></h2>
       <div class="actions">
         <span :class="['tab-btn ui small button', activeTab==='servers'?'active':'']" @click="activeTab='servers'">节点管理</span>
         <span :class="['tab-btn ui small button', activeTab==='settings'?'active':'']" @click="activeTab='settings'">系统设置</span>
