@@ -38,7 +38,7 @@ def request_letsencrypt_cert(domain, email):
                 return True, cert_path, key_path, None
             return False, None, None, "证书文件生成失败"
         else:
-            error_msg = result.stderr or result.stdout or "未知错误"
+            error_msg = result.stdout or result.stderr or "未知错误"
             logger.error("certbot 申请失败: %s", error_msg)
             return False, None, None, error_msg
     except subprocess.TimeoutExpired:
