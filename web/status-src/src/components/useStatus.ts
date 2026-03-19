@@ -7,8 +7,9 @@ interface Props {
 
 export default (props: Props) => {
   const getStatus = computed((): boolean => {
-    if ('online' in props.server) return (props.server as any).online;
-    return props.server.online4 || props.server.online6;
+    const s = props.server as BoxItem;
+    if (s.online !== undefined) return s.online;
+    return s.online4 || s.online6;
   });
 
   const getCpuStatus = computed((): number => (props.server as StatusItem).cpu === undefined ?
