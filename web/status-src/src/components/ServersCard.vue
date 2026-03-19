@@ -1,5 +1,8 @@
 <template>
   <div id="cards">
+    <div class="toggle-all" @click="toggleAll" v-if="groups.length > 1">
+      <span>{{ allCollapsed ? '▶ 全部展开' : '▼ 全部折叠' }}</span>
+    </div>
     <div v-for="(group, gIndex) of groups" :key="gIndex" class="group-section">
       <div class="group-header" @click="toggleGroup(group.name)">
         <span>{{ collapsed[group.name] ? '▶' : '▼' }} {{ group.name || '未分组' }} ({{ group.servers.length }}台)</span>
@@ -58,12 +61,35 @@ export default defineComponent({
       collapsed[name] = !collapsed[name];
     };
 
-    return { groups, collapsed, toggleGroup };
+    const allCollapsed = computed(() =>
+      groups.value.length > 0 && groups.value.every(g => collapsed[g.name])
+    );
+
+    const toggleAll = () => {
+      const target = !allCollapsed.value;
+      for (const g of groups.value) {
+        collapsed[g.name] = target;
+      }
+    };
+
+    return { groups, collapsed, toggleGroup, allCollapsed, toggleAll };
   }
 });
 </script>
 
 <style>
+.toggle-all {
+  cursor: pointer;
+  padding: 6px 12px;
+  color: #888;
+  font-size: 0.9rem;
+  user-select: none;
+}
+
+.toggle-all:hover {
+  color: #555;
+}
+
 #cards {
   padding-top: 3.4rem;
   padding-bottom: 3.5rem;
