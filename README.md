@@ -1,21 +1,42 @@
 # ServerStatus-Rabbit 🐇
 
-轻量级多服务器状态监控面板，基于 Python 重写后端，兼容 [ServerStatus-Hotaru](https://github.com/cokemine/ServerStatus-Hotaru) 客户端协议。
+轻量级多服务器状态监控面板，基于 Python + Vue 3 构建，兼容 [ServerStatus-Hotaru](https://github.com/cokemine/ServerStatus-Hotaru) 客户端协议。
 
-![ServerStatus-Rabbit](https://img.shields.io/badge/version-v0.123-blue)
+![version](https://img.shields.io/badge/version-v0.13-blue)
 ![Python](https://img.shields.io/badge/python-3.12-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
+---
+
+## 目录
+
+- [功能特性](#功能特性)
+- [快速开始](#快速开始)
+- [添加被监控节点](#添加被监控节点)
+- [更新与维护](#更新与维护)
+- [后台管理](#后台管理)
+- [端口说明](#端口说明)
+- [数据持久化](#数据持久化)
+- [紧急恢复](#紧急恢复)
+- [非 Docker 部署](#非-docker-部署)
+- [技术栈](#技术栈)
+
+---
+
 ## 功能特性
 
-- **实时监控** — CPU、内存、磁盘、网络流量、系统负载一目了然
-- **分组管理** — 按地区/用途对节点分组显示
-- **Web 后台** — 浏览器中增删改节点，无需编辑配置文件
-- **一键部署命令** — 新增节点后自动生成客户端 Docker 部署命令
-- **掉线告警** — Webhook 通知（支持企业微信、Slack、自定义 URL）
-- **HTTPS 支持** — Let's Encrypt 自动申请 / 手动上传证书
-- **深色模式** — 监控页和后台管理均支持
-- **Docker 一键部署** — 多阶段构建，服务端/客户端双角色
+| 类别 | 特性 |
+|------|------|
+| 监控 | CPU、内存、磁盘、网络流量、系统负载实时展示 |
+| 管理 | Web 后台增删改节点，无需编辑配置文件 |
+| 分组 | 按地区/用途对节点分组，支持全部折叠/展开 |
+| 告警 | 节点掉线/恢复 Webhook 通知（企业微信、Slack、自定义 URL） |
+| HTTPS | Let's Encrypt 一键申请 / 手动上传证书 |
+| 部署 | Docker 多阶段构建，服务端/客户端双角色 |
+| 主题 | 监控页与后台均支持深色模式 |
+| 兼容 | 兼容 ServerStatus-Hotaru 原版 Python 客户端协议 |
+
+---
 
 ## 快速开始
 
@@ -40,28 +61,42 @@ docker run -d --restart=always \
   serverstatus-rabbit
 ```
 
-启动后访问 `http://你的IP:9191` 查看监控页面，访问 `http://你的IP:9191/admin` 进入后台管理。
+启动后：
+- 监控页面：`http://你的IP:9191`
+- 后台管理：`http://你的IP:9191/admin`（首次访问需设置管理员密码）
 
-> **首次访问后台**会提示设置管理员密码（至少 6 位）。
-> 80 端口仅在申请/续期 Let's Encrypt 证书时由 certbot 临时监听数秒，平时空闲。
+---
 
-### 升级已有部署
+## 添加被监控节点
 
-如果你之前已经部署过旧版本，需要重建容器以应用最新改动：
+在后台管理点击「+ 新增节点」，填写信息后系统会自动生成部署命令：
 
 ```bash
-# 拉取最新代码
+docker run -d --restart=always \
+  --pid=host --net=host \
+  -v /proc:/host/proc:ro \
+  -v /sys:/host/sys:ro \
+  -v /:/host/rootfs:ro \
+  serverstatus-rabbit client \
+  --server=服务端IP \
+  --port=9192 \
+  --user=节点用户名 \
+  --pass=节点密码
+```
+
+在被监控服务器上运行即可。
+
+---
+
+## 更新与维护
+
+### 完整重建（涉及前端监控页或 Dockerfile 改动时）
+
+```bash
 cd ServerStatus-Rabbit
 git pull
-
-# 停止并删除旧容器
-docker stop ss-server
-docker rm ss-server
-
-# 重新构建镜像
+docker stop ss-server && docker rm ss-server
 docker build -t serverstatus-rabbit .
-
-# 用新参数启动
 docker run -d --restart=always \
   --name ss-server \
   -p 9191:9191 \
@@ -72,11 +107,9 @@ docker run -d --restart=always \
   serverstatus-rabbit
 ```
 
-> 数据卷 `data/` 中的配置和账户信息会保留，无需重新设置。
+> `data/` 目录中的配置和账户信息会保留，无需重新设置。
 
-### 热更新（免重建）
-
-如果本次更新**不涉及前端监控页（Vue 组件）改动**，可以用热更新脚本直接将后端代码和管理页面注入到运行中的容器，无需重建镜像：
+### 热更新（仅后端或管理页面改动时）
 
 ```bash
 cd ServerStatus-Rabbit
@@ -84,82 +117,73 @@ git pull
 bash update.sh ss-server
 ```
 
-脚本会自动将 `server/`、`client/`、`app.py`、`web/admin/` 复制到容器内并重启。
+脚本会将 `server/`、`client/`、`app.py`、`web/admin/` 复制到容器内并重启，无需重建镜像。
 
-> **注意：** 如果更新包含前端监控页（`web/status-src/` 下的 Vue 组件）改动，仍需完整重建镜像。
+> **注意：** 前端监控页（`web/status-src/` 下的 Vue 组件）或 Dockerfile 改动仍需完整重建。
 
-### 3. 添加被监控节点
+---
 
-在后台管理页面点击「新增节点」，填写节点信息后系统会自动生成部署命令，形如：
+## 后台管理
 
-```bash
-docker run -d --restart=always \
-  --pid=host --net=host \
-  -v /proc:/host/proc:ro \
-  -v /sys:/host/sys:ro \
-  -v /:/host/rootfs:ro \
-  serverstatus-rabbit client \
-  --server=你的服务端IP \
-  --port=9192 \
-  --user=节点用户名 \
-  --pass=节点密码
-```
+| 功能 | 说明 |
+|------|------|
+| 节点管理 | 增删改查，支持分组、禁用/启用、一键生成部署命令 |
+| HTTPS 设置 | Let's Encrypt 自动申请或手动上传证书，内置 DNS 检测工具 |
+| 端口管理 | 动态开关 9191 HTTP 端口（HTTPS 启用后可关闭） |
+| 页面设置 | 自定义监控页标题和副标题 |
+| 告警设置 | Webhook 掉线/恢复通知，支持测试发送 |
+| 深色模式 | 一键切换，偏好自动保存 |
 
-在被监控服务器上运行该命令即可。
+---
 
 ## 端口说明
 
-| 端口 | 用途 |
-|------|------|
-| 9191 | Web 监控页面 + 后台管理（HTTP） |
-| 9192 | TCP 数据通信（客户端上报数据） |
-| 443 | HTTPS（可选，后台开启后生效） |
-| 80 | Let's Encrypt 证书验证（certbot 申请/续期时临时监听数秒，平时空闲） |
+| 端口 | 用途 | 必需 |
+|------|------|------|
+| 9191 | Web 监控页 + 后台管理（HTTP） | ✅ |
+| 9192 | TCP 数据通信（客户端上报） | ✅ |
+| 443 | HTTPS（后台开启后生效） | 可选 |
+| 80 | Let's Encrypt 证书验证（certbot 临时监听数秒，平时空闲） | 可选 |
+
+---
 
 ## 数据持久化
 
-所有数据存储在 `/app/data/` 目录中，请挂载宿主机卷以持久化：
+所有数据存储在容器内 `/app/data/`，通过 `-v $(pwd)/data:/app/data` 挂载到宿主机：
 
 ```
 data/
 ├── config.json      # 节点配置
 ├── admin.json       # 管理员账户
-├── settings.json    # 系统设置（HTTPS、端口、Webhook）
+├── settings.json    # 系统设置（HTTPS、端口、Webhook、页面）
 └── certs/           # SSL 证书
 ```
 
-## 后台管理功能
-
-| 功能 | 说明 |
-|------|------|
-| 节点管理 | 增删改节点，支持分组、禁用/启用 |
-| HTTPS 管理 | Let's Encrypt 自动申请或手动上传证书 |
-| 端口管理 | 动态开关 9191 端口（HTTPS 启用后可关闭） |
-| Webhook | 节点掉线/恢复时发送通知，支持测试 |
-| 深色模式 | 一键切换，偏好自动保存 |
+---
 
 ## 紧急恢复
 
-如果 HTTPS 配置出错导致无法访问后台：
+**HTTPS 配置出错导致无法访问后台：**
 
 ```bash
 docker exec -it ss-server python recover.py
 docker restart ss-server
 ```
 
-如果管理员密码忘记或被锁定（连续 10 次错误）：
+**管理员密码忘记或被锁定（连续 10 次错误）：**
 
 ```bash
 docker exec -it ss-server python recover.py --reset-password
 docker restart ss-server
 ```
 
+---
+
 ## 非 Docker 部署
 
 ### 服务端
 
 ```bash
-# 安装依赖
 pip install -r requirements.txt
 
 # 构建前端（需要 Node.js）
@@ -169,7 +193,6 @@ cd ../..
 mkdir -p web/status
 cp -r web/status-src/dist/* web/status/
 
-# 启动服务端
 python app.py
 ```
 
@@ -180,18 +203,19 @@ pip install psutil requests
 python app.py client --server=服务端IP --port=9192 --user=用户名 --pass=密码
 ```
 
+---
+
 ## 技术栈
 
-- **后端**：Python 3.12 + Flask + werkzeug
-- **前端监控页**：Vue 3 + TypeScript + Semantic UI
-- **后台管理**：Vue 3 (CDN) + Semantic UI (CDN)
-- **数据采集**：psutil
-- **容器**：Docker 多阶段构建
+| 层 | 技术 |
+|----|------|
+| 后端 | Python 3.12 + Flask + werkzeug |
+| 前端监控页 | Vue 3 + TypeScript + Semantic UI |
+| 后台管理 | Vue 3 (CDN) + Semantic UI (CDN) |
+| 数据采集 | psutil |
+| 容器 | Docker 多阶段构建（node:18-slim + python:3.12-slim） |
 
-## 兼容性
-
-- 兼容 ServerStatus-Hotaru 原版 Python 客户端协议
-- 旧客户端可直接连接，无需修改
+---
 
 ## 开发分支
 
