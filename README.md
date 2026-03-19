@@ -2,7 +2,7 @@
 
 轻量级多服务器状态监控面板，基于 Python 重写后端，兼容 [ServerStatus-Hotaru](https://github.com/cokemine/ServerStatus-Hotaru) 客户端协议。
 
-![ServerStatus-Rabbit](https://img.shields.io/badge/version-v0.1-blue)
+![ServerStatus-Rabbit](https://img.shields.io/badge/version-v0.123-blue)
 ![Python](https://img.shields.io/badge/python-3.12-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
@@ -42,6 +42,35 @@ docker run -d --restart=always \
 启动后访问 `http://你的IP:9191` 查看监控页面，访问 `http://你的IP:9191/admin` 进入后台管理。
 
 > **首次访问后台**会提示设置管理员密码（至少 6 位）。
+> **注意：** 不要映射 80 端口（`-p 80:80`），80 端口仅在后台申请 Let's Encrypt 证书时由 certbot 临时使用。
+
+### 升级已有部署
+
+如果你之前已经部署过旧版本，需要重建容器以应用最新改动：
+
+```bash
+# 拉取最新代码
+cd ServerStatus-Rabbit
+git pull
+
+# 停止并删除旧容器
+docker stop ss-server
+docker rm ss-server
+
+# 重新构建镜像
+docker build -t serverstatus-rabbit .
+
+# 用新参数启动（注意：不映射 80 端口）
+docker run -d --restart=always \
+  --name ss-server \
+  -p 9191:9191 \
+  -p 9192:9192 \
+  -p 443:443 \
+  -v $(pwd)/data:/app/data \
+  serverstatus-rabbit
+```
+
+> 数据卷 `data/` 中的配置和账户信息会保留，无需重新设置。
 
 ### 3. 添加被监控节点
 

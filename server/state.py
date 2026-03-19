@@ -8,7 +8,8 @@ import logging
 logger = logging.getLogger('state')
 
 _lock = threading.Lock()
-_nodes = {}  # {username: {last_seen, online, alert_sent, data}}
+_nodes = {}  # {username: {last_seen, online, alert_sent, connected_since, data}}
+_newly_online_queue = []  # 新上线节点队列，由 update_node 写入，check_and_alert 消费
 
 
 def init_nodes(config_servers):
@@ -57,6 +58,7 @@ def update_node(username, data):
         node['last_seen'] = time.time()
         if not node['online']:
             node['connected_since'] = time.time()
+            _newly_online_queue.append(username)
         node['online'] = True
         # 合并上报的数据字段
         for key in data:
@@ -82,7 +84,7 @@ def get_all_stats(config_servers):
                 'online': node['online'] if not srv.get('disabled', False) else False,
                 'online4': node['data'].get('online4', False) if node['online'] else False,
                 'online6': node['data'].get('online6', False) if node['online'] else False,
-                'uptime': str(int(time.time() - node['connected_since'])) if node['online'] and node.get('connected_since', 0) > 0 else '0',
+                'uptime': str(int(node['last_seen'] - node['connected_since'])) if node['online'] and node.get('connected_since', 0) > 0 and node['last_seen'] > node['connected_since'] else '0',
                 'load': node['data'].get('load', 0.0),
                 'cpu': node['data'].get('cpu', 0.0),
                 'cpu_cores': node['data'].get('cpu_cores', 1),
@@ -106,10 +108,9 @@ def get_all_stats(config_servers):
 
 
 def check_offline(timeout_seconds):
-    """扫描所有节点，返回新增掉线和新增上线的节点列表"""
+    """扫描所有节点，返回新增掉线的节点列表"""
     now = time.time()
     newly_offline = []
-    newly_online = []
     with _lock:
         for username, node in _nodes.items():
             if node['last_seen'] == 0:
@@ -120,12 +121,15 @@ def check_offline(timeout_seconds):
                     node['online'] = False
                     node['connected_since'] = 0
                     newly_offline.append(username)
-            else:
-                if not node['online']:
-                    node['online'] = True
-                    node['connected_since'] = now
-                    newly_online.append(username)
-    return newly_offline, newly_online
+    return newly_offline
+
+
+def pop_newly_online():
+    """取出并清空新上线节点列表（由 update_node 写入）"""
+    with _lock:
+        result = list(_newly_online_queue)
+        _newly_online_queue.clear()
+        return result
 
 
 def mark_alert_sent(username):

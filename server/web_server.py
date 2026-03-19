@@ -379,8 +379,9 @@ def delete_server(username):
     if not config_manager.find_server(username):
         return jsonify(ok=False, message="节点不存在"), 404
 
-    # 断开 TCP 连接
+    # 断开 TCP 连接并清理状态
     tcp_server.disconnect_user(username)
+    state.set_offline(username)
     config_manager.delete_server(username)
     state.reload_nodes(config_manager.get_servers())
 

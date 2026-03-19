@@ -20,22 +20,22 @@
       }}
     </td>
     <td>
-      <div class="ui progress" :class="getProcessBarStatus(getCpuStatus)">
-        <div class="bar" :style="{'width': `${getCpuStatus.toString()}%`}">
+      <div class="ui progress" :class="getStatus ? getProcessBarStatus(getCpuStatus) : 'error'">
+        <div class="bar" :style="{'width': getStatus ? `${getCpuStatus.toString()}%` : '100%'}">
           {{ getStatus ? `${getCpuStatus.toString()}%` : '维护中' }}
         </div>
       </div>
     </td>
     <td>
-      <div class="ui progress" :class="getProcessBarStatus(getRAMStatus)">
-        <div class="bar" :style="{'width': `${getRAMStatus.toString()}%`}">
+      <div class="ui progress" :class="getStatus ? getProcessBarStatus(getRAMStatus) : 'error'">
+        <div class="bar" :style="{'width': getStatus ? `${getRAMStatus.toString()}%` : '100%'}">
           {{ getStatus ? `${getRAMStatus.toString()}%` : '维护中' }}
         </div>
       </div>
     </td>
     <td>
-      <div class="ui progress" :class="getProcessBarStatus(getHDDStatus)">
-        <div class="bar" :style="{'width': `${getHDDStatus.toString()}%`}">
+      <div class="ui progress" :class="getStatus ? getProcessBarStatus(getHDDStatus) : 'error'">
+        <div class="bar" :style="{'width': getStatus ? `${getHDDStatus.toString()}%` : '100%'}">
           {{ getStatus ? `${getHDDStatus.toString()}%` : '维护中' }}
         </div>
       </div>
