@@ -487,6 +487,33 @@ def settings_port9191():
         return jsonify(ok=True, message="9191 端口已开启")
 
 
+@app.route('/api/settings/ui', methods=['GET'])
+def get_ui_settings():
+    """获取 UI 配置（公开接口，前端需要读取标题）"""
+    settings = config_manager.load_settings()
+    return jsonify(ok=True, data=settings.get('ui', {}))
+
+
+@app.route('/api/settings/ui', methods=['POST'])
+@_require_login
+@_require_https_for_admin
+def set_ui_settings():
+    """设置 UI 配置"""
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify(ok=False, message="请求体不合法"), 400
+
+    settings = config_manager.load_settings()
+    ui = settings.get('ui', {})
+    if 'header' in data:
+        ui['header'] = str(data['header']).strip()[:100]
+    if 'subHeader' in data:
+        ui['subHeader'] = str(data['subHeader']).strip()[:200]
+    settings['ui'] = ui
+    config_manager.save_settings(settings)
+    return jsonify(ok=True, message="页面设置已保存")
+
+
 @app.route('/api/settings/webhook', methods=['GET'])
 @_require_login
 @_require_https_for_admin

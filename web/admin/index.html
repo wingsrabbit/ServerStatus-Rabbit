@@ -206,6 +206,21 @@
         <br>
         <button class="ui primary button" @click="saveSettings">保存设置</button>
       </div>
+
+      <div class="ui segment">
+        <h3>页面设置</h3>
+        <div class="ui form">
+          <div class="field">
+            <label>页面标题</label>
+            <input v-model="uiForm.header" placeholder="Server Status">
+          </div>
+          <div class="field">
+            <label>页面副标题</label>
+            <input v-model="uiForm.subHeader" placeholder="Servers' Probes Set up with ServerStatus-Rabbit">
+          </div>
+          <button class="ui primary button" @click="saveUiSettings">保存页面设置</button>
+        </div>
+      </div>
     </div>
 
     <!-- 告警 Tab -->
@@ -343,6 +358,7 @@ createApp({
     const httpsForm = reactive({ enabled: false, mode: 'letsencrypt', domain: '', email: '' });
     const portForm = reactive({ webEnabled: true });
     const webhookForm = reactive({ enabled: false, url: '', timeout_seconds: 30 });
+    const uiForm = reactive({ header: 'Server Status', subHeader: "Servers' Probes Set up with ServerStatus-Rabbit" });
 
     // 弹窗
     const showAddModal = ref(false);
@@ -391,7 +407,7 @@ createApp({
           initialized.value = res.data.initialized;
           locked.value = res.data.locked;
           loggedIn.value = res.data.logged_in;
-          if (loggedIn.value) { loadServers(); loadSettings(); loadWebhook(); }
+          if (loggedIn.value) { loadServers(); loadSettings(); loadWebhook(); loadUiSettings(); }
         }
       } catch (e) { console.error(e); }
     }
@@ -401,7 +417,7 @@ createApp({
       authMsg.value = '';
       const res = await api('/admin/setup', { method: 'POST', body: { password: setupForm.password, confirm: setupForm.confirm } });
       authMsg.value = res.message; authOk.value = res.ok;
-      if (res.ok) { loggedIn.value = true; initialized.value = true; loadServers(); loadSettings(); loadWebhook(); }
+      if (res.ok) { loggedIn.value = true; initialized.value = true; loadServers(); loadSettings(); loadWebhook(); loadUiSettings(); }
     }
 
     // 登录
@@ -409,7 +425,7 @@ createApp({
       authMsg.value = '';
       const res = await api('/admin/login', { method: 'POST', body: { password: loginForm.password } });
       authMsg.value = res.message; authOk.value = res.ok;
-      if (res.ok) { loggedIn.value = true; loadServers(); loadSettings(); loadWebhook(); }
+      if (res.ok) { loggedIn.value = true; loadServers(); loadSettings(); loadWebhook(); loadUiSettings(); }
       if (res.message && res.message.includes('锁定')) { locked.value = true; }
     }
 
@@ -523,6 +539,20 @@ createApp({
         if (res.ok && res.data) Object.assign(webhookForm, res.data);
       } catch (e) { console.error(e); }
     }
+
+    // UI 设置
+    async function loadUiSettings() {
+      try {
+        const res = await api('/api/settings/ui');
+        if (res.ok && res.data) Object.assign(uiForm, res.data);
+      } catch (e) { console.error(e); }
+    }
+    async function saveUiSettings() {
+      globalMsg.value = '';
+      const res = await api('/api/settings/ui', { method: 'POST', body: { ...uiForm } });
+      globalMsg.value = res.message; globalOk.value = res.ok;
+      setTimeout(() => { globalMsg.value = ''; }, 3000);
+    }
     async function saveWebhook() {
       globalMsg.value = '';
       const res = await api('/api/settings/webhook', { method: 'POST', body: { ...webhookForm } });
@@ -553,7 +583,7 @@ createApp({
     return {
       loggedIn, initialized, locked, activeTab, servers, isDark,
       authMsg, authOk, globalMsg, globalOk, modalMsg, modalOk,
-      setupForm, loginForm, nodeForm, editForm, httpsForm, portForm, webhookForm,
+      setupForm, loginForm, nodeForm, editForm, httpsForm, portForm, webhookForm, uiForm,
       showAddModal, showEditModal, showDeployModal, showDeleteModal,
       deployCommand, deleteTarget, groupedServers, groupCollapsed,
       certFile, keyFile,
@@ -563,6 +593,7 @@ createApp({
       confirmDelete, doDelete,
       saveSettings, uploadCert,
       saveWebhook, testWebhook, loadWebhook,
+      saveUiSettings, loadUiSettings,
       copyDeploy, toggleTheme, checkStatus
     };
   }

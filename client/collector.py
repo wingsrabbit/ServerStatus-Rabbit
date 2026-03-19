@@ -89,6 +89,11 @@ def get_cpu():
     return psutil.cpu_percent(interval=INTERVAL)
 
 
+def get_cpu_cores():
+    """获取 CPU 逻辑核心数"""
+    return psutil.cpu_count(logical=True) or 1
+
+
 class Network:
     """网络流量采集"""
     def __init__(self):
@@ -162,6 +167,7 @@ def collect_all(traffic, check_ip, timer):
         'hdd_total': hdd_total,
         'hdd_used': hdd_used,
         'cpu': cpu,
+        'cpu_cores': get_cpu_cores(),
         'network_rx': net_rx,
         'network_tx': net_tx,
         'network_in': net_in,
