@@ -2,7 +2,7 @@
 
 轻量级多服务器状态监控面板，基于 Python + Vue 3 构建，兼容 [ServerStatus-Hotaru](https://github.com/cokemine/ServerStatus-Hotaru) 客户端协议。
 
-![version](https://img.shields.io/badge/version-v0.13-blue)
+![version](https://img.shields.io/badge/version-v0.130-blue)
 ![Python](https://img.shields.io/badge/python-3.12-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
@@ -237,25 +237,14 @@ python app.py client --server=服务端IP --port=9192 --user=用户名 --pass=�
 
 ---
 
-## 开发分支
+## 当前版本
 
-如果你想体验最新的开发中功能，可以切换到功能分支：
+当前主线版本：v0.130
 
-```bash
-# 克隆仓库并切换到开发分支
-git clone https://github.com/wingsrabbit/ServerStatus-Rabbit.git
-cd ServerStatus-Rabbit
-git checkout ServerStatus-Rabbit-feature-v0.12
-```
+说明：
 
-当前活跃分支：
-
-| 分支 | 说明 |
-|------|------|
-| `main` | 稳定版（v0.1） |
-| `ServerStatus-Rabbit-feature-v0.12` | 开发中：自定义页面标题、uptime 格式化、CPU 核心数显示、页脚实时更新 |
-
-> ⚠️ 开发分支的功能尚未经过完整测试，可能存在不稳定情况。稳定使用请以 `main` 分支为准。
+- 仓库以 `main` 作为唯一保留主分支
+- 以 `main` 的当前内容作为唯一有效发布基线
 
 ## License
 
