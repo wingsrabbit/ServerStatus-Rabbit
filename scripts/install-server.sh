@@ -91,6 +91,8 @@ ensure_docker() {
 }
 
 sync_repo() {
+  local current_origin dirty_output tmp_dir
+
   if [ -d "$SSR_APP_DIR/.git" ]; then
     log "updating existing repo in $SSR_APP_DIR"
     if git -C "$SSR_APP_DIR" remote get-url origin >/dev/null 2>&1; then
@@ -102,6 +104,18 @@ sync_repo() {
     else
       git -C "$SSR_APP_DIR" remote add origin "$SSR_REPO_URL"
     fi
+
+    dirty_output=$(git -C "$SSR_APP_DIR" status --porcelain --untracked-files=all | grep -vE '^(\?\? )?data(/|$)' || true)
+    if [ -n "$dirty_output" ]; then
+      log "repo is dirty, refreshing code while keeping data"
+      tmp_dir=$(mktemp -d)
+      git clone -b "$SSR_BRANCH" "$SSR_REPO_URL" "$tmp_dir/repo"
+      find "$SSR_APP_DIR" -mindepth 1 -maxdepth 1 ! -name data -exec rm -rf {} +
+      cp -a "$tmp_dir/repo"/. "$SSR_APP_DIR"/
+      rm -rf "$tmp_dir"
+      return
+    fi
+
     git -C "$SSR_APP_DIR" fetch origin "$SSR_BRANCH:refs/remotes/origin/$SSR_BRANCH"
     git -C "$SSR_APP_DIR" checkout -B "$SSR_BRANCH" "origin/$SSR_BRANCH"
     git -C "$SSR_APP_DIR" pull --ff-only origin "$SSR_BRANCH"
