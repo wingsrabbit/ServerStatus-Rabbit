@@ -96,6 +96,7 @@ set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 
 - 构建 `serverstatus-rabbit:v0.131`
 - 以 `--pid=host --net=host` 方式启动客户端容器
 - 直接主动连接服务端 TCP 端口
+- 默认把客户端代码放到 `/opt/ServerStatus-Rabbit-节点用户名`，避免同机已有部署时互相覆盖
 
 如果服务端 TCP 端口不是默认的 `9192`，就在同一条命令里加 `SSR_PORT`：
 
@@ -116,6 +117,8 @@ set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 
 - 如果机器访问 `get.docker.com` 不稳定，安装脚本会先尝试直接用系统包管理器装 Docker
 
 只有一种情况需要额外写端口：服务端没有使用默认的 `9192`，而是改成了别的 TCP 端口，这时才需要显式传 `SSR_PORT`。
+
+如果你希望客户端代码落到自定义目录，也可以额外传 `SSR_APP_DIR=/your/path`。
 
 将 `服务端IP`、`节点用户名`、`节点密码` 替换为后台管理中的实际值。启动后节点会自动出现在监控页面上。
 

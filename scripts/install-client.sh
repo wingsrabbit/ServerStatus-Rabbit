@@ -3,7 +3,7 @@ set -euo pipefail
 
 SSR_BRANCH=${SSR_BRANCH:-ServerStatus-Rabbit-NG}
 SSR_REPO_URL=${SSR_REPO_URL:-https://github.com/wingsrabbit/ServerStatus-Rabbit.git}
-SSR_APP_DIR=${SSR_APP_DIR:-/opt/ServerStatus-Rabbit}
+SSR_APP_DIR=${SSR_APP_DIR:-}
 SSR_IMAGE=${SSR_IMAGE:-serverstatus-rabbit:v0.131}
 SSR_SERVER=${SSR_SERVER:-}
 SSR_PORT=${SSR_PORT:-9192}
@@ -48,6 +48,17 @@ ensure_required_args() {
   [ -n "$SSR_SERVER" ] || fail 'SSR_SERVER is required'
   [ -n "$SSR_USER" ] || fail 'SSR_USER is required'
   [ -n "$SSR_PASS" ] || fail 'SSR_PASS is required'
+}
+
+set_default_app_dir() {
+  local safe_user
+
+  if [ -n "$SSR_APP_DIR" ]; then
+    return
+  fi
+
+  safe_user=$(printf '%s' "$SSR_USER" | tr -cs 'a-zA-Z0-9_.-' '-')
+  SSR_APP_DIR="/opt/ServerStatus-Rabbit-$safe_user"
 }
 
 ensure_git() {
@@ -168,6 +179,7 @@ show_result() {
 
 need_root
 ensure_required_args
+set_default_app_dir
 ensure_git
 ensure_docker
 sync_repo
