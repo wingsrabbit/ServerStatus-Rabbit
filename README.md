@@ -49,6 +49,7 @@ set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 
 这条命令会自动完成这些事情：
 
 - 没有 Docker 就先安装 Docker
+- 优先通过系统包管理器安装 Docker，只有失败时才回退到 `get.docker.com`
 - 没有 Git 就先安装 Git
 - 拉取 `ServerStatus-Rabbit-NG` 分支代码
 - 构建 `serverstatus-rabbit:v0.131`
@@ -89,6 +90,7 @@ set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 
 这条命令会自动完成这些事情：
 
 - 没有 Docker 就先安装 Docker
+- 优先通过系统包管理器安装 Docker，只有失败时才回退到 `get.docker.com`
 - 没有 Git 就先安装 Git
 - 拉取 `ServerStatus-Rabbit-NG` 分支代码
 - 构建 `serverstatus-rabbit:v0.131`
@@ -111,6 +113,7 @@ set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 
 - NAT 客户端也可以用这条命令
 - 不需要额外的 NAT mode
 - 不需要为“普通公网 Agent”单独准备另一套启动方式
+- 如果机器访问 `get.docker.com` 不稳定，安装脚本会先尝试直接用系统包管理器装 Docker
 
 只有一种情况需要额外写端口：服务端没有使用默认的 `9192`，而是改成了别的 TCP 端口，这时才需要显式传 `SSR_PORT`。
 

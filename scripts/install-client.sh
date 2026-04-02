@@ -65,7 +65,24 @@ ensure_docker() {
 
   if ! command -v docker >/dev/null 2>&1; then
     log 'docker not found, installing docker'
-    curl -fsSL https://get.docker.com | sh
+    if command -v apt-get >/dev/null 2>&1; then
+      if ! install_pkg docker.io; then
+        log 'package install failed, falling back to get.docker.com'
+        curl -fsSL https://get.docker.com | sh
+      fi
+    elif command -v dnf >/dev/null 2>&1; then
+      if ! dnf install -y docker; then
+        log 'package install failed, falling back to get.docker.com'
+        curl -fsSL https://get.docker.com | sh
+      fi
+    elif command -v yum >/dev/null 2>&1; then
+      if ! yum install -y docker; then
+        log 'package install failed, falling back to get.docker.com'
+        curl -fsSL https://get.docker.com | sh
+      fi
+    else
+      curl -fsSL https://get.docker.com | sh
+    fi
   fi
 
   if command -v systemctl >/dev/null 2>&1; then
