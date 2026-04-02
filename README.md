@@ -43,7 +43,7 @@
 在你的**主控服务器**上以 root 执行下面这一行：
 
 ```bash
-bash -lc 'set -e; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-server.sh | bash'
+set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; tmp=$(mktemp); curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-server.sh -o "$tmp"; chmod +x "$tmp"; echo '[install] running installer'; bash "$tmp"; rm -f "$tmp"
 ```
 
 这条命令会自动完成这些事情：
@@ -67,12 +67,14 @@ bash -lc 'set -e; if ! command -v curl >/dev/null 2>&1; then if command -v apt-g
 如果你的机器上 9191 或 9192 已经被占用，可以直接在同一条命令里覆盖端口：
 
 ```bash
-bash -lc 'set -e; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-server.sh | env SSR_WEB_PORT=9291 SSR_TCP_PORT=9292 bash'
+set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; tmp=$(mktemp); curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-server.sh -o "$tmp"; chmod +x "$tmp"; echo '[install] running installer'; env SSR_WEB_PORT=9291 SSR_TCP_PORT=9292 bash "$tmp"; rm -f "$tmp"
 ```
 
 ### 1. 在后台添加节点
 
 登录后台管理，点击「+ 新增节点」，填写节点名称、用户名、密码等信息并保存。系统会自动生成该节点对应的客户端部署命令。
+
+现在后台生成的命令会自动带上你当前访问后台时所用的服务端地址，以及当前 TCP 端口。正常情况下直接复制到 Linux Shell 里执行即可。
 
 ---
 
@@ -81,7 +83,7 @@ bash -lc 'set -e; if ! command -v curl >/dev/null 2>&1; then if command -v apt-g
 在每台**被监控服务器**上以 root 执行下面这一行：
 
 ```bash
-bash -lc 'set -e; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-client.sh | env SSR_SERVER=服务端IP SSR_USER=节点用户名 SSR_PASS=节点密码 bash'
+set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; tmp=$(mktemp); curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-client.sh -o "$tmp"; chmod +x "$tmp"; echo '[install] running installer'; env SSR_SERVER=example.com SSR_USER=node-1 SSR_PASS=change-me bash "$tmp"; rm -f "$tmp"
 ```
 
 这条命令会自动完成这些事情：
@@ -96,7 +98,7 @@ bash -lc 'set -e; if ! command -v curl >/dev/null 2>&1; then if command -v apt-g
 如果服务端 TCP 端口不是默认的 `9192`，就在同一条命令里加 `SSR_PORT`：
 
 ```bash
-bash -lc 'set -e; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-client.sh | env SSR_SERVER=服务端IP SSR_PORT=9292 SSR_USER=节点用户名 SSR_PASS=节点密码 bash'
+set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; tmp=$(mktemp); curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-client.sh -o "$tmp"; chmod +x "$tmp"; echo '[install] running installer'; env SSR_SERVER=example.com SSR_PORT=9292 SSR_USER=node-1 SSR_PASS=change-me bash "$tmp"; rm -f "$tmp"
 ```
 
 ### NAT 和公网是否要区分

@@ -38,18 +38,52 @@ INSTALL_SCRIPT_BASE = (
 )
 
 
-def _curl_bootstrap(script_name, env_items):
+def _get_request_host_for_client():
+    forwarded_host = request.headers.get('X-Forwarded-Host', '').strip()
+    candidate = (forwarded_host or request.host or '').split(',')[0].strip()
+    if not candidate:
+        return ''
+    if candidate.startswith('[') and ']' in candidate:
+        return candidate[1:candidate.index(']')]
+    if candidate.count(':') == 1:
+        return candidate.rsplit(':', 1)[0]
+    return candidate
+
+
+def _guess_client_server_host():
+    forced_host = os.environ.get('SSR_INSTALL_SERVER_HOST', '').strip()
+    if forced_host:
+        return forced_host
+
+    https_domain = _get_https_domain().strip()
+    if https_domain:
+        return https_domain
+
+    request_host = _get_request_host_for_client()
+    if request_host:
+        return request_host
+
+    return '你的服务端IP'
+
+
+def _install_script_command(script_name, env_items):
     assignments = ' '.join(
         f'{key}={shlex.quote(str(value))}' for key, value in env_items.items()
     )
     return (
-        "bash -lc 'set -e; "
+        "set -e; "
+        "echo '[install] downloading installer'; "
         "if ! command -v curl >/dev/null 2>&1; then "
         "if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; "
         "elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; "
         "elif command -v yum >/dev/null 2>&1; then yum install -y curl; "
         "else echo \"请先安装 curl\"; exit 1; fi; fi; "
-        f"curl -fsSL {INSTALL_SCRIPT_BASE}/{script_name} | env {assignments} bash'"
+        "tmp=$(mktemp); "
+        f"curl -fsSL {INSTALL_SCRIPT_BASE}/{script_name} -o \"$tmp\"; "
+        "chmod +x \"$tmp\"; "
+        "echo '[install] running installer'; "
+        f"env {assignments} bash \"$tmp\"; "
+        "rm -f \"$tmp\""
     )
 
 
@@ -308,8 +342,8 @@ def add_server():
 
     settings = config_manager.load_settings()
     tcp_port = settings.get('ports', {}).get('tcp', 9192)
-    deploy_cmd = _curl_bootstrap('install-client.sh', {
-        'SSR_SERVER': '你的服务端IP',
+    deploy_cmd = _install_script_command('install-client.sh', {
+        'SSR_SERVER': _guess_client_server_host(),
         'SSR_PORT': tcp_port,
         'SSR_USER': username,
         'SSR_PASS': password,
