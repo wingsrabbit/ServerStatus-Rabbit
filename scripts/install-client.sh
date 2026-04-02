@@ -10,6 +10,8 @@ SSR_PORT=${SSR_PORT:-9192}
 SSR_USER=${SSR_USER:-}
 SSR_PASS=${SSR_PASS:-}
 SSR_CONTAINER=${SSR_CONTAINER:-}
+SSR_SERVICE=${SSR_SERVICE:-}
+SSR_RUNTIME_MODE=docker
 
 log() {
   printf '[install-client] %s\n' "$*"
@@ -65,6 +67,19 @@ ensure_git() {
   if ! command -v git >/dev/null 2>&1; then
     log 'git not found, installing git'
     install_pkg git
+  fi
+}
+
+ensure_python_runtime() {
+  if ! command -v python3 >/dev/null 2>&1; then
+    log 'python3 not found, installing python3 and python3-venv'
+    install_pkg python3 python3-venv
+    return
+  fi
+
+  if ! python3 -m venv --help >/dev/null 2>&1; then
+    log 'python3 venv support not found, installing python3-venv'
+    install_pkg python3-venv
   fi
 }
 
@@ -143,18 +158,38 @@ sync_repo() {
 
 build_image() {
   log "building image $SSR_IMAGE"
-  docker build -t "$SSR_IMAGE" "$SSR_APP_DIR"
+  if docker build -t "$SSR_IMAGE" "$SSR_APP_DIR"; then
+    SSR_RUNTIME_MODE=docker
+    return
+  fi
+
+  log 'docker build failed, falling back to python venv mode'
+  SSR_RUNTIME_MODE=python
+  ensure_python_runtime
+  python3 -m venv "$SSR_APP_DIR/venv"
+  "$SSR_APP_DIR/venv/bin/pip" install -r "$SSR_APP_DIR/requirements.txt"
 }
 
-sanitize_container_name() {
+sanitize_runtime_names() {
+  local safe_user
+
+  safe_user=$(printf '%s' "$SSR_USER" | tr -cs 'a-zA-Z0-9_.-' '-')
+
   if [ -z "$SSR_CONTAINER" ]; then
-    SSR_CONTAINER="ssr-client-$SSR_USER"
+    SSR_CONTAINER="ssr-client-$safe_user"
   fi
   SSR_CONTAINER=$(printf '%s' "$SSR_CONTAINER" | tr -cs 'a-zA-Z0-9_.-' '-')
+
+  if [ -z "$SSR_SERVICE" ]; then
+    SSR_SERVICE="serverstatus-rabbit-client-$safe_user.service"
+  fi
 }
 
 run_container() {
   log "starting container $SSR_CONTAINER"
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl disable --now "$SSR_SERVICE" >/dev/null 2>&1 || true
+  fi
   docker rm -f "$SSR_CONTAINER" >/dev/null 2>&1 || true
   docker run -d --restart=always \
     --name "$SSR_CONTAINER" \
@@ -170,11 +205,55 @@ run_container() {
     --pass="$SSR_PASS" >/dev/null
 }
 
+run_python_service() {
+  local service_path log_path
+
+  log "starting python client service $SSR_SERVICE"
+  docker rm -f "$SSR_CONTAINER" >/dev/null 2>&1 || true
+
+  if command -v systemctl >/dev/null 2>&1; then
+    service_path="/etc/systemd/system/$SSR_SERVICE"
+    cat > "$service_path" <<EOF
+[Unit]
+Description=ServerStatus-Rabbit Client ($SSR_USER)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=$SSR_APP_DIR
+ExecStart=$SSR_APP_DIR/venv/bin/python $SSR_APP_DIR/app.py client --server=$SSR_SERVER --port=$SSR_PORT --user=$SSR_USER --pass=$SSR_PASS
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable --now "$SSR_SERVICE"
+    return
+  fi
+
+  log_path="/var/log/${SSR_SERVICE%.service}.log"
+  pkill -f "$SSR_APP_DIR/app.py client --server=$SSR_SERVER --port=$SSR_PORT --user=$SSR_USER" >/dev/null 2>&1 || true
+  nohup "$SSR_APP_DIR/venv/bin/python" "$SSR_APP_DIR/app.py" client --server="$SSR_SERVER" --port="$SSR_PORT" --user="$SSR_USER" --pass="$SSR_PASS" > "$log_path" 2>&1 &
+}
+
 show_result() {
   log 'deployment complete'
   printf 'server: %s:%s\n' "$SSR_SERVER" "$SSR_PORT"
-  printf 'container: %s\n' "$SSR_CONTAINER"
-  docker ps --format '{{.Names}} {{.Image}} {{.Status}}' | grep -F "$SSR_CONTAINER" || true
+  printf 'mode: %s\n' "$SSR_RUNTIME_MODE"
+  if [ "$SSR_RUNTIME_MODE" = docker ]; then
+    printf 'container: %s\n' "$SSR_CONTAINER"
+    docker ps --format '{{.Names}} {{.Image}} {{.Status}}' | grep -F "$SSR_CONTAINER" || true
+    return
+  fi
+
+  printf 'service: %s\n' "$SSR_SERVICE"
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl is-active "$SSR_SERVICE" || true
+  fi
 }
 
 need_root
@@ -184,6 +263,10 @@ ensure_git
 ensure_docker
 sync_repo
 build_image
-sanitize_container_name
-run_container
+sanitize_runtime_names
+if [ "$SSR_RUNTIME_MODE" = docker ]; then
+  run_container
+else
+  run_python_service
+fi
 show_result

@@ -97,6 +97,7 @@ set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 
 - 以 `--pid=host --net=host` 方式启动客户端容器
 - 直接主动连接服务端 TCP 端口
 - 默认把客户端代码放到 `/opt/ServerStatus-Rabbit-节点用户名`，避免同机已有部署时互相覆盖
+- 如果 Docker 已装好但当前机器拉不到 Docker Hub 基础镜像，客户端会自动回退到 `python3 + venv + systemd`
 
 如果服务端 TCP 端口不是默认的 `9192`，就在同一条命令里加 `SSR_PORT`：
 
@@ -115,6 +116,7 @@ set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 
 - 不需要额外的 NAT mode
 - 不需要为“普通公网 Agent”单独准备另一套启动方式
 - 如果机器访问 `get.docker.com` 不稳定，安装脚本会先尝试直接用系统包管理器装 Docker
+- 如果机器能访问 GitHub 但拉不到 Docker Hub，客户端安装脚本也会自动退到 Python 方式，仍然能直接接入
 
 只有一种情况需要额外写端口：服务端没有使用默认的 `9192`，而是改成了别的 TCP 端口，这时才需要显式传 `SSR_PORT`。
 
