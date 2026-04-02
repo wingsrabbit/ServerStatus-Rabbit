@@ -99,6 +99,15 @@ ensure_docker() {
 sync_repo() {
   if [ -d "$SSR_APP_DIR/.git" ]; then
     log "updating existing repo in $SSR_APP_DIR"
+    if git -C "$SSR_APP_DIR" remote get-url origin >/dev/null 2>&1; then
+      current_origin=$(git -C "$SSR_APP_DIR" remote get-url origin || true)
+      if [ "$current_origin" != "$SSR_REPO_URL" ]; then
+        log "rewriting origin from $current_origin to $SSR_REPO_URL"
+        git -C "$SSR_APP_DIR" remote set-url origin "$SSR_REPO_URL"
+      fi
+    else
+      git -C "$SSR_APP_DIR" remote add origin "$SSR_REPO_URL"
+    fi
     git -C "$SSR_APP_DIR" fetch origin "$SSR_BRANCH:refs/remotes/origin/$SSR_BRANCH"
     git -C "$SSR_APP_DIR" checkout -B "$SSR_BRANCH" "origin/$SSR_BRANCH"
     git -C "$SSR_APP_DIR" pull --ff-only origin "$SSR_BRANCH"
