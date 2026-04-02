@@ -84,7 +84,7 @@ set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 
 在每台**被监控服务器**上以 root 执行下面这一行：
 
 ```bash
-set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; tmp=$(mktemp); curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-client.sh -o "$tmp"; chmod +x "$tmp"; echo '[install] running installer'; env SSR_SERVER=example.com SSR_USER=node-1 SSR_PASS=change-me bash "$tmp"; rm -f "$tmp"
+set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; tmp=$(mktemp); curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-client.sh -o "$tmp"; chmod +x "$tmp"; echo '[install] running installer'; env SSR_SERVER=example.com SSR_APP_DIR=/opt/ServerStatus-Rabbit-node-1 SSR_USER=node-1 SSR_PASS=change-me bash "$tmp"; rm -f "$tmp"
 ```
 
 这条命令会自动完成这些事情：
@@ -101,7 +101,7 @@ set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 
 如果服务端 TCP 端口不是默认的 `9192`，就在同一条命令里加 `SSR_PORT`：
 
 ```bash
-set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; tmp=$(mktemp); curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-client.sh -o "$tmp"; chmod +x "$tmp"; echo '[install] running installer'; env SSR_SERVER=example.com SSR_PORT=9292 SSR_USER=node-1 SSR_PASS=change-me bash "$tmp"; rm -f "$tmp"
+set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; tmp=$(mktemp); curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-client.sh -o "$tmp"; chmod +x "$tmp"; echo '[install] running installer'; env SSR_SERVER=example.com SSR_PORT=9292 SSR_APP_DIR=/opt/ServerStatus-Rabbit-node-1 SSR_USER=node-1 SSR_PASS=change-me bash "$tmp"; rm -f "$tmp"
 ```
 
 ### NAT 和公网是否要区分
@@ -119,6 +119,8 @@ set -e; echo '[install] downloading installer'; if ! command -v curl >/dev/null 
 只有一种情况需要额外写端口：服务端没有使用默认的 `9192`，而是改成了别的 TCP 端口，这时才需要显式传 `SSR_PORT`。
 
 如果你希望客户端代码落到自定义目录，也可以额外传 `SSR_APP_DIR=/your/path`。
+
+后台新增节点后自动生成的命令，默认也会带上按用户名区分的 `SSR_APP_DIR`，这样复制后不会和同机已有部署撞目录。
 
 将 `服务端IP`、`节点用户名`、`节点密码` 替换为后台管理中的实际值。启动后节点会自动出现在监控页面上。
 

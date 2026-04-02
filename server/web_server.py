@@ -345,6 +345,7 @@ def add_server():
     deploy_cmd = _install_script_command('install-client.sh', {
         'SSR_SERVER': _guess_client_server_host(),
         'SSR_PORT': tcp_port,
+        'SSR_APP_DIR': f'/opt/ServerStatus-Rabbit-{username}',
         'SSR_USER': username,
         'SSR_PASS': password,
     })
