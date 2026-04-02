@@ -12,7 +12,7 @@
 
 | 角色 | IP | 主机名 | 当前用途 |
 | --- | --- | --- | --- |
-| ServerStatus-Rabbit 服务端 | 123.253.226.10 | Test-HK1 | 部署 v0.130 服务端，提供 Web 页面、管理页和 TCP 上报通道 |
+| ServerStatus-Rabbit 服务端 | 123.253.226.10 | Test-HK1 | 部署 v0.131 服务端，提供 Web 页面、管理页和 TCP 上报通道 |
 
 ### 1.2 客户端
 
@@ -21,6 +21,7 @@
 | ServerStatus Client 11 | 123.253.226.11 | test2 | 连接 123.253.226.10:9292，上报主机状态 |
 | ServerStatus Client 12 | 123.253.226.12 | test3 | 连接 123.253.226.10:9292，上报主机状态 |
 | ServerStatus Client 13 | 123.253.226.13 | test4 | 连接 123.253.226.10:9292，上报主机状态 |
+| ServerStatus NAT Client 102 | 192.168.88.102 | debian13-test | 本地 NAT 客户端，无公网入口，仅主动连接 123.253.226.10:9292 |
 
 ## 2. 2026-04-02 实际部署结果
 
@@ -28,17 +29,19 @@
 
 | IP | 部署结果 | 运行方式 | 已核验事实 |
 | --- | --- | --- | --- |
-| 123.253.226.10 | 已部署服务端 | Docker | 代码位于 /opt/ServerStatus-Rabbit；容器名 ssr-server；镜像名 serverstatus-rabbit:v0.130；对外使用 9291 和 9292 |
+| 123.253.226.10 | 已部署服务端 | Docker | 代码位于 /opt/ServerStatus-Rabbit；容器名 ssr-server；镜像名 serverstatus-rabbit:v0.131；对外使用 9291 和 9292 |
 | 123.253.226.11 | 已部署客户端 | Python venv + systemd | 代码位于 /opt/ServerStatus-Rabbit；服务名 serverstatus-rabbit-client.service；状态 active |
 | 123.253.226.12 | 已部署客户端 | Python venv + systemd | 代码位于 /opt/ServerStatus-Rabbit；服务名 serverstatus-rabbit-client.service；状态 active |
 | 123.253.226.13 | 已部署客户端 | Python venv + systemd | 代码位于 /opt/ServerStatus-Rabbit；服务名 serverstatus-rabbit-client.service；状态 active |
+| 192.168.88.102 | 已部署客户端 | Python venv + systemd | 代码位于 /opt/ServerStatus-Rabbit；服务名 serverstatus-rabbit-client.service；无公网端口；通过主动出站连接接入服务端 |
 
 补充结论：
 
-1. 四台机器都已经通过 D:/wingsrabbit-key/id_rsa_private 实机登录验证。
+1. 五台机器都已经通过 D:/wingsrabbit-key/id_rsa_private 实机登录验证。
 2. 123.253.226.10 当前同时还承载 NetworkStatus-Rabbit，所以不能占用它原有的 9191 和 9192。
 3. 本次 ServerStatus-Rabbit 测试部署已明确改走 9291 和 9292，不影响现有 NetworkStatus-Rabbit。
-4. 服务端当前通过 http://127.0.0.1:9291/api/stats 已实际看到 3 个客户端全部 online=true。
+4. 192.168.88.102 是纯 NAT 客户端，没有公网入口，但不影响它主动出站接入 123.253.226.10:9292。
+5. 服务端当前通过 http://127.0.0.1:9291/api/stats 已实际看到 4 个客户端全部 online=true。
 
 ## 3. 当前部署参数
 
@@ -47,27 +50,28 @@
 | 项目 | 当前值 |
 | --- | --- |
 | 部署路径 | /opt/ServerStatus-Rabbit |
-| Git 基线 | GitHub main |
-| 实际版本口径 | v0.130 |
+| Git 基线 | GitHub ServerStatus-Rabbit-NG |
+| 实际版本口径 | v0.131 |
 | Web 端口 | 9291 |
 | TCP 上报端口 | 9292 |
 | 容器名 | ssr-server |
-| 镜像名 | serverstatus-rabbit:v0.130 |
-| 页面标题 | ServerStatus-Rabbit v0.130 Test |
-| 页面副标题 | Server 123.253.226.10 with clients 123.253.226.11-13 |
+| 镜像名 | serverstatus-rabbit:v0.131 |
+| 页面标题 | ServerStatus-Rabbit v0.131 Test |
+| 页面副标题 | Server 123.253.226.10 with clients 123.253.226.11-13 and 192.168.88.102 |
 
 管理页和监控页访问入口：
 
 1. 监控页：http://123.253.226.10:9291/
 2. 管理页：http://123.253.226.10:9291/admin
 
-### 3.2 客户端 123.253.226.11 到 123.253.226.13
+### 3.2 客户端 123.253.226.11 到 123.253.226.13 与 192.168.88.102
 
 | 客户端 IP | 用户名 | 密码 | systemd 服务 | 连接目标 |
 | --- | --- | --- | --- | --- |
 | 123.253.226.11 | ssr-11 | SSR130-client11 | serverstatus-rabbit-client.service | 123.253.226.10:9292 |
 | 123.253.226.12 | ssr-12 | SSR130-client12 | serverstatus-rabbit-client.service | 123.253.226.10:9292 |
 | 123.253.226.13 | ssr-13 | SSR130-client13 | serverstatus-rabbit-client.service | 123.253.226.10:9292 |
+| 192.168.88.102 | ssr-102 | SSR131-local102 | serverstatus-rabbit-client.service | 123.253.226.10:9292 |
 
 客户端统一参数：
 
@@ -75,6 +79,7 @@
 2. Python 虚拟环境路径都是 /opt/ServerStatus-Rabbit/venv
 3. 服务以 root 用户运行
 4. 服务设置为开机自启并自动重启
+5. 192.168.88.102 不需要对外开放任何端口，只需要保持对 123.253.226.10:9292 的出站可达
 
 ## 4. 登录方式
 
@@ -83,7 +88,7 @@
 已知信息：
 
 1. 密钥目录在 D:/wingsrabbit-key/
-2. 当前已经实机确认：四台机器都可以使用 D:/wingsrabbit-key/id_rsa_private 登录
+2. 当前已经实机确认：五台机器都可以使用 D:/wingsrabbit-key/id_rsa_private 登录
 3. 当前已经实机确认：四台机器登录用户都是 root
 
 ## 5. 核验方式
@@ -114,13 +119,14 @@
 4. 不要把 ServerStatus-Rabbit 的端口改回 9191 或 9192，除非先处理现有环境冲突。
 5. 如果要重部署服务端，优先只操作 /opt/ServerStatus-Rabbit 和 ssr-server。
 6. 如果要重部署客户端，优先只操作 /opt/ServerStatus-Rabbit 和 serverstatus-rabbit-client.service。
+7. 192.168.88.102 是内网 NAT 机器，不能按“服务端主动回连客户端”的思路处理，它只能主动发起到 123.253.226.10:9292 的连接。
 
 ## 7. 新人接手时最短结论
 
 如果只是想快速接手这套测试环境，先记住下面几件事：
 
 1. ServerStatus-Rabbit 服务端在 123.253.226.10，不在 9191 和 9192，而是在 9291 和 9292。
-2. 三台客户端是 123.253.226.11 到 123.253.226.13，已经接入并在线。
+2. 当前共有四台客户端在线：123.253.226.11、123.253.226.12、123.253.226.13、192.168.88.102。
 3. 服务端用 Docker，客户端用 Python venv + systemd。
 4. 全部机器都用 root + D:/wingsrabbit-key/id_rsa_private 登录。
-5. 这次实机部署对应的仓库版本口径是 v0.130，代码基线来自 GitHub main。
+5. 这次实机部署对应的仓库版本口径是 v0.131，代码基线来自 GitHub ServerStatus-Rabbit-NG 分支。

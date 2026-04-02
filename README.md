@@ -2,7 +2,7 @@
 
 轻量级多服务器状态监控面板，基于 Python + Vue 3 构建，兼容 [ServerStatus-Hotaru](https://github.com/cokemine/ServerStatus-Hotaru) 客户端协议。
 
-![version](https://img.shields.io/badge/version-v0.130-blue)
+![version](https://img.shields.io/badge/version-v0.131-blue)
 ![Python](https://img.shields.io/badge/python-3.12-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
@@ -45,9 +45,9 @@
 ### 1. 构建镜像
 
 ```bash
-git clone https://github.com/wingsrabbit/ServerStatus-Rabbit.git
+git clone -b ServerStatus-Rabbit-NG https://github.com/wingsrabbit/ServerStatus-Rabbit.git
 cd ServerStatus-Rabbit
-docker build -t serverstatus-rabbit .
+docker build -t serverstatus-rabbit:v0.131 .
 ```
 
 ### 2. 启动服务端
@@ -60,7 +60,7 @@ docker run -d --restart=always \
   -p 443:443 \
   -p 80:80 \
   -v $(pwd)/data:/app/data \
-  serverstatus-rabbit
+  serverstatus-rabbit:v0.131
 ```
 
 启动后：
@@ -80,9 +80,9 @@ docker run -d --restart=always \
 ### 1. 构建镜像（每台被监控机器都需要）
 
 ```bash
-git clone https://github.com/wingsrabbit/ServerStatus-Rabbit.git
+git clone -b ServerStatus-Rabbit-NG https://github.com/wingsrabbit/ServerStatus-Rabbit.git
 cd ServerStatus-Rabbit
-docker build -t serverstatus-rabbit .
+docker build -t serverstatus-rabbit:v0.131 .
 ```
 
 > 客户端和服务端使用同一个镜像，通过启动参数区分角色。
@@ -97,7 +97,7 @@ docker run -d --restart=always \
   -v /proc:/host/proc:ro \
   -v /sys:/host/sys:ro \
   -v /:/host/rootfs:ro \
-  serverstatus-rabbit client \
+  serverstatus-rabbit:v0.131 client \
   --server=服务端IP \
   --port=9192 \
   --user=节点用户名 \
@@ -239,12 +239,13 @@ python app.py client --server=服务端IP --port=9192 --user=用户名 --pass=�
 
 ## 当前版本
 
-当前主线版本：v0.130
+当前主线版本：v0.131
 
 说明：
 
-- 仓库以 `main` 作为唯一保留主分支
-- 以 `main` 的当前内容作为唯一有效发布基线
+- `main` 保留 v0.130 正式版
+- `ServerStatus-Rabbit-NG` 作为 v0.131 升级分支
+- v0.131 已纳入 192.168.88.102 NAT 客户端的实机接入与交接资料
 
 ## License
 
