@@ -117,7 +117,7 @@ sync_repo() {
     fi
 
     git -C "$SSR_APP_DIR" fetch origin "$SSR_BRANCH:refs/remotes/origin/$SSR_BRANCH"
-    git -C "$SSR_APP_DIR" checkout -B "$SSR_BRANCH" "origin/$SSR_BRANCH"
+    git -C "$SSR_APP_DIR" checkout -f -B "$SSR_BRANCH" "origin/$SSR_BRANCH"
     git -C "$SSR_APP_DIR" pull --ff-only origin "$SSR_BRANCH"
     return
   fi
