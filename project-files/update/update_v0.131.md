@@ -20,6 +20,8 @@
 - 更新 `project-files/testread/README.md`，纳入 192.168.88.102 NAT 客户端和五机实际部署结果
 - 更新 `project-files/20260402-project.md`，使总档与 NG 分支现状保持一致
 - 计划将服务端与全部客户端统一切换到 `ServerStatus-Rabbit-NG` 分支对应代码
+- 新增 `scripts/install-server.sh` 与 `scripts/install-client.sh`
+- 更新 README 与后台生成的部署命令，使服务端和客户端都支持一行安装，并统一适配 NAT 与公网客户端
 
 本次部署侧变化：
 

@@ -32,7 +32,7 @@
 | 分组 | 按地区/用途对节点分组，支持全部折叠/展开 |
 | 告警 | 节点掉线/恢复 Webhook 通知（企业微信、Slack、自定义 URL） |
 | HTTPS | Let's Encrypt 一键申请 / 手动上传证书 |
-| 部署 | Docker 多阶段构建，服务端/客户端双角色 |
+| 部署 | Docker 多阶段构建，服务端/客户端双角色，支持一行脚本自动装 Docker 并完成部署 |
 | 主题 | 监控页与后台均支持深色模式 |
 | 兼容 | 兼容 ServerStatus-Hotaru 原版 Python 客户端协议 |
 
@@ -40,34 +40,37 @@
 
 ## 快速开始 — 服务端
 
-在你的**主控服务器**上执行：
-
-### 1. 构建镜像
+在你的**主控服务器**上以 root 执行下面这一行：
 
 ```bash
-git clone -b ServerStatus-Rabbit-NG https://github.com/wingsrabbit/ServerStatus-Rabbit.git
-cd ServerStatus-Rabbit
-docker build -t serverstatus-rabbit:v0.131 .
+bash -lc 'set -e; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-server.sh | bash'
 ```
 
-### 2. 启动服务端
+这条命令会自动完成这些事情：
 
-```bash
-docker run -d --restart=always \
-  --name ss-server \
-  -p 9191:9191 \
-  -p 9192:9192 \
-  -p 443:443 \
-  -p 80:80 \
-  -v $(pwd)/data:/app/data \
-  serverstatus-rabbit:v0.131
-```
+- 没有 Docker 就先安装 Docker
+- 没有 Git 就先安装 Git
+- 拉取 `ServerStatus-Rabbit-NG` 分支代码
+- 构建 `serverstatus-rabbit:v0.131`
+- 启动服务端容器 `ssr-server`
+- 自动把服务端监听端口写入 `data/settings.json`
+
+默认端口：
+
+- Web：`9191`
+- TCP 上报：`9192`
 
 启动后：
 - 监控页面：`http://你的IP:9191`
 - 后台管理：`http://你的IP:9191/admin`（首次访问需设置管理员密码）
 
-### 3. 在后台添加节点
+如果你的机器上 9191 或 9192 已经被占用，可以直接在同一条命令里覆盖端口：
+
+```bash
+bash -lc 'set -e; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-server.sh | env SSR_WEB_PORT=9291 SSR_TCP_PORT=9292 bash'
+```
+
+### 1. 在后台添加节点
 
 登录后台管理，点击「+ 新增节点」，填写节点名称、用户名、密码等信息并保存。系统会自动生成该节点对应的客户端部署命令。
 
@@ -75,34 +78,39 @@ docker run -d --restart=always \
 
 ## 快速开始 — 客户端
 
-在每台**被监控服务器**上执行：
-
-### 1. 构建镜像（每台被监控机器都需要）
+在每台**被监控服务器**上以 root 执行下面这一行：
 
 ```bash
-git clone -b ServerStatus-Rabbit-NG https://github.com/wingsrabbit/ServerStatus-Rabbit.git
-cd ServerStatus-Rabbit
-docker build -t serverstatus-rabbit:v0.131 .
+bash -lc 'set -e; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-client.sh | env SSR_SERVER=服务端IP SSR_USER=节点用户名 SSR_PASS=节点密码 bash'
 ```
 
-> 客户端和服务端使用同一个镜像，通过启动参数区分角色。
+这条命令会自动完成这些事情：
 
-### 2. 启动客户端
+- 没有 Docker 就先安装 Docker
+- 没有 Git 就先安装 Git
+- 拉取 `ServerStatus-Rabbit-NG` 分支代码
+- 构建 `serverstatus-rabbit:v0.131`
+- 以 `--pid=host --net=host` 方式启动客户端容器
+- 直接主动连接服务端 TCP 端口
 
-使用后台管理为该节点生成的部署命令运行：
+如果服务端 TCP 端口不是默认的 `9192`，就在同一条命令里加 `SSR_PORT`：
 
 ```bash
-docker run -d --restart=always \
-  --pid=host --net=host \
-  -v /proc:/host/proc:ro \
-  -v /sys:/host/sys:ro \
-  -v /:/host/rootfs:ro \
-  serverstatus-rabbit:v0.131 client \
-  --server=服务端IP \
-  --port=9192 \
-  --user=节点用户名 \
-  --pass=节点密码
+bash -lc 'set -e; if ! command -v curl >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; elif command -v yum >/dev/null 2>&1; then yum install -y curl; else echo "请先安装 curl"; exit 1; fi; fi; curl -fsSL https://raw.githubusercontent.com/wingsrabbit/ServerStatus-Rabbit/ServerStatus-Rabbit-NG/scripts/install-client.sh | env SSR_SERVER=服务端IP SSR_PORT=9292 SSR_USER=节点用户名 SSR_PASS=节点密码 bash'
 ```
+
+### NAT 和公网是否要区分
+
+不用区分。
+
+当前项目的客户端始终是**主动向服务端发起 TCP 连接**，所以：
+
+- 公网客户端可以用这条命令
+- NAT 客户端也可以用这条命令
+- 不需要额外的 NAT mode
+- 不需要为“普通公网 Agent”单独准备另一套启动方式
+
+只有一种情况需要额外写端口：服务端没有使用默认的 `9192`，而是改成了别的 TCP 端口，这时才需要显式传 `SSR_PORT`。
 
 将 `服务端IP`、`节点用户名`、`节点密码` 替换为后台管理中的实际值。启动后节点会自动出现在监控页面上。
 
@@ -114,17 +122,15 @@ docker run -d --restart=always \
 
 ```bash
 cd ServerStatus-Rabbit
-git pull
-docker stop ss-server && docker rm ss-server
-docker build -t serverstatus-rabbit .
+git pull origin ServerStatus-Rabbit-NG
+docker stop ssr-server && docker rm ssr-server
+docker build -t serverstatus-rabbit:v0.131 .
 docker run -d --restart=always \
-  --name ss-server \
+  --name ssr-server \
   -p 9191:9191 \
   -p 9192:9192 \
-  -p 443:443 \
-  -p 80:80 \
   -v $(pwd)/data:/app/data \
-  serverstatus-rabbit
+  serverstatus-rabbit:v0.131
 ```
 
 > `data/` 目录中的配置和账户信息会保留，无需重新设置。
@@ -133,8 +139,8 @@ docker run -d --restart=always \
 
 ```bash
 cd ServerStatus-Rabbit
-git pull
-bash update.sh ss-server
+git pull origin ServerStatus-Rabbit-NG
+bash update.sh ssr-server
 ```
 
 脚本会将 `server/`、`client/`、`app.py`、`web/admin/` 复制到容器内并重启，无需重建镜像。
@@ -164,6 +170,12 @@ bash update.sh ss-server
 | 9192 | TCP 数据通信（客户端上报） | ✅ |
 | 443 | HTTPS（后台开启后生效） | 可选 |
 | 80 | Let's Encrypt 证书验证（certbot 临时监听数秒，平时空闲） | 可选 |
+
+说明：
+
+- 默认一行安装脚本直接使用 `9191` 和 `9192`
+- 如果你的服务器要避开端口冲突，可以在安装命令中改成 `SSR_WEB_PORT` 和 `SSR_TCP_PORT`
+- 客户端不区分 NAT 或公网，统一只需要能主动访问服务端的 TCP 端口即可
 
 ---
 
@@ -246,6 +258,7 @@ python app.py client --server=服务端IP --port=9192 --user=用户名 --pass=�
 - `main` 保留 v0.130 正式版
 - `ServerStatus-Rabbit-NG` 作为 v0.131 升级分支
 - v0.131 已纳入 192.168.88.102 NAT 客户端的实机接入与交接资料
+- v0.131 README 已提供服务端与客户端的一行安装命令
 
 ## License
 

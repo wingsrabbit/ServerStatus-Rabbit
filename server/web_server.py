@@ -3,6 +3,7 @@
 
 import os
 import re
+import shlex
 import time
 import threading
 import logging
@@ -29,6 +30,27 @@ _http_server = None
 _https_server = None
 _http_thread = None
 _https_thread = None
+
+INSTALL_BRANCH = os.environ.get('SSR_INSTALL_BRANCH', 'ServerStatus-Rabbit-NG')
+INSTALL_SCRIPT_BASE = (
+    'https://raw.githubusercontent.com/'
+    f'wingsrabbit/ServerStatus-Rabbit/{INSTALL_BRANCH}/scripts'
+)
+
+
+def _curl_bootstrap(script_name, env_items):
+    assignments = ' '.join(
+        f'{key}={shlex.quote(str(value))}' for key, value in env_items.items()
+    )
+    return (
+        "bash -lc 'set -e; "
+        "if ! command -v curl >/dev/null 2>&1; then "
+        "if command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get install -y curl; "
+        "elif command -v dnf >/dev/null 2>&1; then dnf install -y curl; "
+        "elif command -v yum >/dev/null 2>&1; then yum install -y curl; "
+        "else echo \"请先安装 curl\"; exit 1; fi; fi; "
+        f"curl -fsSL {INSTALL_SCRIPT_BASE}/{script_name} | env {assignments} bash'"
+    )
 
 
 def init_app():
@@ -284,19 +306,14 @@ def add_server():
     config_manager.add_server(server_data)
     state.reload_nodes(config_manager.get_servers())
 
-    # 生成一键部署命令
-    deploy_cmd = (
-        f"docker run -d --restart=always "
-        f"--pid=host --net=host "
-        f"-v /proc:/host/proc:ro "
-        f"-v /sys:/host/sys:ro "
-        f"-v /:/host/rootfs:ro "
-        f"serverstatus-rabbit client "
-        f"--server=你的服务端IP "
-        f"--port=9192 "
-        f"--user={username} "
-        f"--pass={password}"
-    )
+    settings = config_manager.load_settings()
+    tcp_port = settings.get('ports', {}).get('tcp', 9192)
+    deploy_cmd = _curl_bootstrap('install-client.sh', {
+        'SSR_SERVER': '你的服务端IP',
+        'SSR_PORT': tcp_port,
+        'SSR_USER': username,
+        'SSR_PASS': password,
+    })
 
     return jsonify(ok=True, message="节点已创建", data={
         'username': username,
